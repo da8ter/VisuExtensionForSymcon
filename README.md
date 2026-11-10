@@ -9,11 +9,15 @@ Die Erweiterung ist ein reiner Lader. Der Code kommt immer vom Modul auf deinem 
 
 ## Installieren
 
-1. Das Repo herunterladen (grüner Knopf „Code“ → „Download ZIP“) und entpacken, oder das ZIP aus den Releases nehmen.
+1. Aus den [Releases](https://github.com/da8ter/VisuExtensionForSymcon/releases) das ZIP laden und entpacken.
 2. In Chrome `chrome://extensions` öffnen (in Edge `edge://extensions`) und den Entwicklermodus einschalten.
-3. „Entpackte Erweiterung laden“ wählen und den Ordner `src` angeben.
+3. „Entpackte Erweiterung laden“ wählen und den entpackten Ordner angeben.
+
+Wer stattdessen das ganze Repo lädt, gibt in Schritt 3 den Unterordner `src` an.
 
 Die Einrichtung öffnet sich danach von selbst. Später erreichst du sie über das Symbol der Erweiterung.
+
+Den Ordner danach nicht verschieben oder löschen: Der Browser lädt die Erweiterung von dort. Für eine neue Fassung den Inhalt des Ordners ersetzen und die Erweiterung auf der Erweiterungsseite neu laden. Die eingetragenen Verbindungen bleiben erhalten.
 
 ## Einrichten
 
@@ -51,7 +55,7 @@ node tests/options_test.mjs  # Einrichtung in Headless-Chrome, Chrome-Schnittste
 
 ## English summary
 
-Browser extension for Chrome and Edge that loads add-on scripts of installed Symcon modules into the tile visualization, on every page and without a tile of that module being loaded. Install it via “Load unpacked” (folder `src`), then enter the connection address shown in the module's form, prefixed with the address of your visualization. Module developers: see [docs/entwickler.md](docs/entwickler.md) (contract, with an English summary) and [examples/](examples/). Not a product of Symcon GmbH.
+Browser extension for Chrome and Edge that loads add-on scripts of installed Symcon modules into the tile visualization, on every page and without a tile of that module being loaded. Install it via “Load unpacked” (the unpacked release ZIP, or the folder `src` of the repository), then enter the connection address shown in the module's form, prefixed with the address of your visualization. Module developers: see [docs/entwickler.md](docs/entwickler.md) (contract, with an English summary) and [examples/](examples/). Not a product of Symcon GmbH.
 
 ## Lizenz
 
