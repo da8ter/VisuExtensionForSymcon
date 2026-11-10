@@ -51,6 +51,7 @@ Ein Modul braucht einen Hook mit eigenem Schlüssel, der eine kleine Beschreibun
 node tests/core_test.mjs     # Prüfregeln für Adresse und Beschreibung
 node tests/inject_test.mjs   # Inhaltsskript in Headless-Chrome (eigenes Profil)
 node tests/options_test.mjs  # Einrichtung in Headless-Chrome, Chrome-Schnittstellen als Attrappe
+node tests/extension_test.mjs  # die echte Erweiterung in Headless-Chrome, Server nicht unter localhost
 ```
 
 ## English summary

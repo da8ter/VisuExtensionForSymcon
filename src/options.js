@@ -2,7 +2,7 @@
  * `connections` als [{url, name}] (nicht synchronisiert: die Adresse enthält den Schlüssel des Moduls). */
 (function () {
   'use strict';
-  var core = globalThis.VisuExt, SCRIPT_ID = 'visu-ext';
+  var core = globalThis.VisuExt;
   var liste = document.getElementById('liste'), meldung = document.getElementById('meldung'), feld = document.getElementById('adresse');
   var verbindungen = [];
 
@@ -10,11 +10,6 @@
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) { el.textContent = t(el.getAttribute('data-i18n')); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-placeholder]'), function (el) { el.placeholder = t(el.getAttribute('data-i18n-placeholder')); });
   document.documentElement.lang = chrome.i18n.getUILanguage();
-
-  function muster(url) { return new URL(url).origin + '/*'; }
-  function alleMuster() {
-    return verbindungen.map(function (c) { return muster(c.url); }).filter(function (m, i, a) { return a.indexOf(m) === i; });
-  }
 
   /** Beschreibung abrufen. Ergebnis {ok, name, scripts, info} oder {ok:false, grund}. */
   function abrufen(url) {
@@ -27,18 +22,8 @@
     }, function () { return { ok: false, grund: t('stUnreachable') }; });
   }
 
-  /** Inhaltsskript auf genau den eingetragenen Servern anmelden, übrige Freigaben zurückgeben. */
-  function anmelden() {
-    var m = alleMuster();
-    return chrome.scripting.unregisterContentScripts({ ids: [SCRIPT_ID] }).catch(function () { /* noch keins */ }).then(function () {
-      if (m.length) return chrome.scripting.registerContentScripts([{ id: SCRIPT_ID, matches: m, js: ['core.js', 'inject.js'], runAt: 'document_idle' }]);
-    }).then(function () {
-      return chrome.permissions.getAll();
-    }).then(function (p) {
-      var alt = (p.origins || []).filter(function (o) { return m.indexOf(o) < 0; });
-      if (alt.length) return chrome.permissions.remove({ origins: alt });
-    });
-  }
+  // Inhaltsskripte auf genau den eingetragenen Servern anmelden, übrige Freigaben zurückgeben (register.js).
+  function anmelden() { return globalThis.VisuExtRegister(verbindungen); }
   function speichern() {
     return chrome.storage.local.set({ connections: verbindungen }).then(anmelden);
   }
@@ -115,5 +100,7 @@
   chrome.storage.local.get('connections').then(function (r) {
     verbindungen = Array.isArray(r.connections) ? r.connections.filter(function (c) { return c && core.parseAddress(c.url).ok; }) : [];
     zeichnen();
+    // Anmeldung der Inhaltsskripte bei jedem Öffnen auf den Stand der Liste bringen (z. B. nach einer neuen Fassung).
+    return anmelden();
   });
 })();

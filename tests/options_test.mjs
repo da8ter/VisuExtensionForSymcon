@@ -31,7 +31,7 @@ const ATTRAPPE = `<script>
                    getAll: function () { return Promise.resolve({ origins: z.rechte.slice() }); },
                    remove: function (p) { z.rechte = z.rechte.filter(function (o) { return p.origins.indexOf(o) < 0; }); return Promise.resolve(true); } },
     scripting: { unregisterContentScripts: function () { if (!z.skript) return Promise.reject(new Error('keins')); z.skript = null; return Promise.resolve(); },
-                 registerContentScripts: function (a) { z.skript = a[0]; return Promise.resolve(); } }
+                 registerContentScripts: function (a) { z.skript = a; return Promise.resolve(); } }
   });
 })();
 </script>`;
@@ -77,7 +77,7 @@ try {
   };
   const zeilen = () => ev(`Array.prototype.map.call(document.querySelectorAll('.zeile'), (z) => [z.querySelector('.name').textContent, z.querySelector('.ort').textContent, z.querySelector('.status').textContent, z.querySelector('.status').className])`);
   const meldung = () => ev(`document.getElementById('meldung').textContent`);
-  const zustand = () => ev(`[__z.store.map((c) => c.name), __z.rechte, __z.skript && [__z.skript.matches, __z.skript.js, __z.skript.runAt]]`);
+  const zustand = () => ev(`[__z.store.map((c) => c.name), __z.rechte, __z.skript && __z.skript.map((s) => [s.world, s.js, s.matches, s.runAt])]`);
 
   await page.send('Page.navigate', { url: ORIGIN + '/ext/options.html' });
   await sleep(900);
@@ -98,7 +98,7 @@ try {
   pruefe('Gültig: Zeile mit Name, Ort ohne Schlüssel, „Verbunden · Fassung“', await zeilen(), [['Benachrichtigungen', `${ORIGIN}/hook/a`, 'Verbunden · 1.2', 'status ok']]);
   pruefe('Gültig: gespeichert, Server freigegeben, Inhaltsskript angemeldet, Feld geleert',
     [await zustand(), await meldung(), await ev('document.getElementById("adresse").value')],
-    [[['Benachrichtigungen'], [`${ORIGIN}/*`], [[`${ORIGIN}/*`], ['core.js', 'inject.js'], 'document_idle']], '', '']);
+    [[['Benachrichtigungen'], [`${ORIGIN}/*`], [['MAIN', ['inject.js'], [`${ORIGIN}/*`], 'document_idle'], ['ISOLATED', ['core.js', 'bridge.js'], [`${ORIGIN}/*`], 'document_idle']]], '', '']);
 
   await eintragen(`${ORIGIN}/hook/a?t=ok`);
   pruefe('Doppelt: Meldung, keine zweite Zeile', [await meldung(), (await zeilen()).length], [TEXTE.errDuplicate.message, 1]);

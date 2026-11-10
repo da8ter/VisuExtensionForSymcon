@@ -1,6 +1,6 @@
-// Inhaltsskript (src/core.js + src/inject.js) in Headless-Chrome mit eigenem Profil. Ein Node-Server
-// spielt Visu und Hooks nach; chrome.storage ist eine Attrappe, weil sich eine entpackte Erweiterung
-// in aktuellem Chrome nicht mehr per Startparameter laden lässt.
+// Inhaltsskripte (src/inject.js fürs Seitenfenster, src/core.js + src/bridge.js für den abgeschotteten
+// Bereich) in Headless-Chrome mit eigenem Profil, hier beide im selben Fenster. Ein Node-Server spielt
+// Visu und Hooks nach; chrome.storage ist eine Attrappe. Die echte Erweiterung prüft extension_test.mjs.
 //   node tests/inject_test.mjs
 import http from 'node:http';
 import { spawn } from 'node:child_process';
@@ -21,9 +21,10 @@ const pruefe = (name, ist, soll) => {
 
 // ── Nachgespielter Server ───────────────────────────────────────────────────────
 const server = { verbindungen: [], abrufe: [] };
-const seite = (inhalt = '') => `<!doctype html><meta charset="utf-8"><body><div id="visu">Visu</div>${inhalt}
-<script>window.chrome = Object.assign(window.chrome || {}, { storage: { local: { get: function (k, cb) { cb({ connections: ${JSON.stringify(server.verbindungen)} }); } } } });</script>
-<script src="/ext/core.js"></script><script src="/ext/inject.js"></script></body>`;
+const LADER = '<script src="/ext/inject.js"></script>', BRUECKE = '<script src="/ext/core.js"></script><script src="/ext/bridge.js"></script>';
+const seite = (umgekehrt = false) => `<!doctype html><meta charset="utf-8"><body><div id="visu">Visu</div>
+<script>window.chrome = Object.assign(window.chrome || {}, { storage: { local: { get: function (k, cb) { ${umgekehrt ? 'setTimeout(function () {' : ''} cb({ connections: ${JSON.stringify(server.verbindungen)} }); ${umgekehrt ? '}, 30);' : ''} } } } });</script>
+${umgekehrt ? BRUECKE + LADER : LADER + BRUECKE}</body>`;
 const skript = (name) => `window.__lauf = window.__lauf || {}; window.__lauf[${JSON.stringify(name)}] = (window.__lauf[${JSON.stringify(name)}] || 0) + 1;`;
 const srv = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
@@ -32,6 +33,7 @@ const srv = http.createServer((req, res) => {
   const json = (o) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); };
   if (u.pathname.startsWith('/hook/')) server.abrufe.push(u.pathname + u.search);
   if (u.pathname === '/' || u.pathname === '/console/' || u.pathname === '/hook/seite') return html(seite());
+  if (u.pathname === '/umgekehrt') return html(seite(true));
   if (u.pathname === '/rahmen') return html('<!doctype html><body><iframe id="k" src="/"></iframe></body>');
   if (u.pathname.startsWith('/ext/')) return js(readFileSync(join(ROOT, 'src', u.pathname.slice(5)), 'utf8'));
   if (u.pathname === '/hook/a') return u.searchParams.get('t') === 'ok' ? json({ visuExtension: 1, name: 'A', scripts: ['/hook/a/start.js', '/hook/gemeinsam.js'] }) : (res.statusCode = 403, res.end());
@@ -79,6 +81,14 @@ try {
   await laden('/', [`${ORIGIN}/hook/a?t=ok`, `${ORIGIN}/hook/b`, `${ORIGIN}/hook/a?t=ok`]);
   pruefe('Zwei Module: jedes Skript läuft genau einmal, auch das gemeinsame und bei doppelter Verbindung', await lauf(), { a: 1, gemeinsam: 1, b: 1 });
   pruefe('Angehängte Skript-Elemente sind wieder entfernt', await ev('document.querySelectorAll("script[src^=\\"/hook/\\"], script[src*=\\"/hook/\\"]").length'), 0);
+
+  await laden('/umgekehrt', [`${ORIGIN}/hook/a?t=ok`, `${ORIGIN}/hook/b`]);
+  pruefe('Brücke vor dem Lader gestartet, Einstellungen kommen verzögert: läuft genauso', await lauf(), { a: 1, gemeinsam: 1, b: 1 });
+
+  await laden('/', []);
+  await ev(`document.dispatchEvent(new CustomEvent('visu-ext:scripts', { detail: JSON.stringify(['https://boese.example/hook/x.js', '/console/x.js', 'javascript:window.__lauf={boese:1}', 5, ${JSON.stringify(ORIGIN)} + '/console/start.js', ${JSON.stringify(ORIGIN)} + '/hook/b/start.js']) })); 1`);
+  await sleep(500);
+  pruefe('Gefälschtes Ereignis der Seite: nur Adressen dieses Servers unter /hook/ werden angehängt', [await lauf(), await ev('typeof window.VisuExt')], [{ b: 1 }, 'object']);
 
   await laden('/', [`${ORIGIN}/hook/a?t=falsch`, `${ORIGIN}/hook/kaputt`, `${ORIGIN}/hook/alt`, `${ORIGIN}/hook/leer`]);
   pruefe('Falscher Schlüssel, kein JSON, fremde Fassung, leere Liste: nichts läuft', await lauf(), null);
