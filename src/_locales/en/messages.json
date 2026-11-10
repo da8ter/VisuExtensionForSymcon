@@ -1,0 +1,71 @@
+{
+    "extName": {
+        "message": "Visu Extension for Symcon"
+    },
+    "extDescription": {
+        "message": "Loads add-on features of installed modules into the Symcon visualization, for example notifications on every page."
+    },
+    "actionTitle": {
+        "message": "Set up Visu Extension"
+    },
+    "optIntro": {
+        "message": "Modules can offer add-on features for the visualization. Enter the connection address from the module's form here, with the address of your visualization in front."
+    },
+    "optPlaceholder": {
+        "message": "http://symcon.local:3777/hook/…"
+    },
+    "optAdd": {
+        "message": "Add"
+    },
+    "optCheck": {
+        "message": "Check"
+    },
+    "optRemove": {
+        "message": "Remove"
+    },
+    "optEmpty": {
+        "message": "No connection yet."
+    },
+    "optUnnamed": {
+        "message": "Module"
+    },
+    "optReload": {
+        "message": "Reload the visualization after a change."
+    },
+    "optTrust": {
+        "message": "Only enter addresses of modules you trust: their code runs in your visualization. The address contains the module's access key."
+    },
+    "stChecking": {
+        "message": "Checking …"
+    },
+    "stConnected": {
+        "message": "Connected"
+    },
+    "stNoScripts": {
+        "message": "Connected, but the module offers nothing right now."
+    },
+    "stHttp": {
+        "message": "The server answers with error $1. Is the address still correct?"
+    },
+    "stUnreachable": {
+        "message": "The server cannot be reached."
+    },
+    "stInvalid": {
+        "message": "There is no description for the Visu Extension at this address."
+    },
+    "stForeign": {
+        "message": "Rejected: the module names a script that is not on this server under /hook/."
+    },
+    "errAddress": {
+        "message": "This is not a valid connection address. It starts with the address of the visualization and leads to /hook/…"
+    },
+    "errDuplicate": {
+        "message": "This address is already in the list."
+    },
+    "errPermission": {
+        "message": "Without access to this server the extension cannot load anything there."
+    },
+    "errNoManifest": {
+        "message": "Not added. $1"
+    }
+}

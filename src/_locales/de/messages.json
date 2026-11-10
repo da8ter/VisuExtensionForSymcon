@@ -1,0 +1,71 @@
+{
+    "extName": {
+        "message": "Visu-Erweiterung für Symcon"
+    },
+    "extDescription": {
+        "message": "Lädt Zusatzfunktionen installierter Module in die Symcon-Visualisierung, zum Beispiel Benachrichtigungen auf jeder Seite."
+    },
+    "actionTitle": {
+        "message": "Visu-Erweiterung einrichten"
+    },
+    "optIntro": {
+        "message": "Module können Zusatzfunktionen für die Visualisierung anbieten. Trage hier die Verbindungsadresse aus dem Formular des Moduls ein, mit der Adresse deiner Visualisierung davor."
+    },
+    "optPlaceholder": {
+        "message": "http://symcon.local:3777/hook/…"
+    },
+    "optAdd": {
+        "message": "Hinzufügen"
+    },
+    "optCheck": {
+        "message": "Prüfen"
+    },
+    "optRemove": {
+        "message": "Entfernen"
+    },
+    "optEmpty": {
+        "message": "Noch keine Verbindung eingetragen."
+    },
+    "optUnnamed": {
+        "message": "Modul"
+    },
+    "optReload": {
+        "message": "Nach einer Änderung die Visualisierung neu laden."
+    },
+    "optTrust": {
+        "message": "Trage nur Adressen von Modulen ein, denen du vertraust: Ihr Code läuft in deiner Visualisierung. Die Adresse enthält den Zugriffsschlüssel des Moduls."
+    },
+    "stChecking": {
+        "message": "Wird geprüft …"
+    },
+    "stConnected": {
+        "message": "Verbunden"
+    },
+    "stNoScripts": {
+        "message": "Verbunden, aber das Modul bietet gerade nichts an."
+    },
+    "stHttp": {
+        "message": "Der Server antwortet mit Fehler $1. Stimmt die Adresse noch?"
+    },
+    "stUnreachable": {
+        "message": "Der Server ist nicht erreichbar."
+    },
+    "stInvalid": {
+        "message": "Unter dieser Adresse liegt keine Beschreibung für die Visu-Erweiterung."
+    },
+    "stForeign": {
+        "message": "Abgelehnt: Das Modul nennt ein Skript, das nicht auf diesem Server unter /hook/ liegt."
+    },
+    "errAddress": {
+        "message": "Das ist keine gültige Verbindungsadresse. Sie beginnt mit der Adresse der Visualisierung und führt nach /hook/…"
+    },
+    "errDuplicate": {
+        "message": "Diese Adresse ist schon eingetragen."
+    },
+    "errPermission": {
+        "message": "Ohne die Freigabe für diesen Server kann die Erweiterung dort nichts laden."
+    },
+    "errNoManifest": {
+        "message": "Nicht hinzugefügt. $1"
+    }
+}

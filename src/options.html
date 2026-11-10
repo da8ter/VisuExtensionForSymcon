@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title data-i18n="extName"></title>
+<style>
+  :root { --fg: #1d1d1f; --bg: #fff; --muted: #6e6e73; --line: #d2d2d7; --surface: #f5f5f7; --akzent: #00a88d; --rot: #d70015; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #f5f5f7; --bg: #1c1c1e; --muted: #98989d; --line: #48484a; --surface: #2c2c2e; --akzent: #00cdab; --rot: #ff6961; } }
+  body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; color: var(--fg); background: var(--bg); }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  p { margin: 8px 0; }
+  .muted { color: var(--muted); }
+  form { display: flex; gap: 8px; margin: 20px 0 6px; }
+  input { flex: 1; min-width: 0; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: inherit; }
+  button { padding: 8px 16px; border: 0; border-radius: 10px; font: inherit; font-weight: 650; cursor: pointer; background: var(--surface); color: inherit; }
+  button.primary { background: var(--akzent); color: #fff; }
+  #meldung { min-height: 22px; color: var(--rot); }
+  #liste { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+  .zeile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface); }
+  .zeile .haupt { flex: 1; min-width: 0; }
+  .zeile .name { font-weight: 650; overflow-wrap: anywhere; }
+  .zeile .ort, .zeile .status { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .zeile .status.ok { color: var(--akzent); }
+  .zeile .status.fehler { color: var(--rot); }
+  .leer { color: var(--muted); padding: 14px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
+</style>
+</head>
+<body>
+<h1 data-i18n="extName"></h1>
+<p class="muted" data-i18n="optIntro"></p>
+<form id="neu">
+  <input id="adresse" type="text" spellcheck="false" autocomplete="off" data-i18n-placeholder="optPlaceholder">
+  <button class="primary" type="submit" data-i18n="optAdd"></button>
+</form>
+<div id="meldung" role="alert"></div>
+<div id="liste"></div>
+<p class="muted" data-i18n="optReload"></p>
+<p class="muted" data-i18n="optTrust"></p>
+<script src="core.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
