@@ -76,14 +76,15 @@ try {
     await page.send('Page.navigate', { url: ORIGIN + pfad });
     await sleep(900);
   };
-  const lauf = () => ev('window.__lauf || null');
+  // Nach Namen sortiert: in welcher Reihenfolge die Skripte zweier Module laufen, ist nicht festgelegt.
+  const lauf = () => ev('window.__lauf ? Object.fromEntries(Object.entries(window.__lauf).sort()) : null');
 
   await laden('/', [`${ORIGIN}/hook/a?t=ok`, `${ORIGIN}/hook/b`, `${ORIGIN}/hook/a?t=ok`]);
-  pruefe('Zwei Module: jedes Skript läuft genau einmal, auch das gemeinsame und bei doppelter Verbindung', await lauf(), { a: 1, gemeinsam: 1, b: 1 });
+  pruefe('Zwei Module: jedes Skript läuft genau einmal, auch das gemeinsame und bei doppelter Verbindung', await lauf(), { a: 1, b: 1, gemeinsam: 1 });
   pruefe('Angehängte Skript-Elemente sind wieder entfernt', await ev('document.querySelectorAll("script[src^=\\"/hook/\\"], script[src*=\\"/hook/\\"]").length'), 0);
 
   await laden('/umgekehrt', [`${ORIGIN}/hook/a?t=ok`, `${ORIGIN}/hook/b`]);
-  pruefe('Brücke vor dem Lader gestartet, Einstellungen kommen verzögert: läuft genauso', await lauf(), { a: 1, gemeinsam: 1, b: 1 });
+  pruefe('Brücke vor dem Lader gestartet, Einstellungen kommen verzögert: läuft genauso', await lauf(), { a: 1, b: 1, gemeinsam: 1 });
 
   await laden('/', []);
   await ev(`document.dispatchEvent(new CustomEvent('visu-ext:scripts', { detail: JSON.stringify(['https://boese.example/hook/x.js', '/console/x.js', 'javascript:window.__lauf={boese:1}', 5, ${JSON.stringify(ORIGIN)} + '/console/start.js', ${JSON.stringify(ORIGIN)} + '/hook/b/start.js']) })); 1`);
