@@ -14,21 +14,23 @@ const pruefe = (name, ist, soll) => {
 };
 
 /** Nachgestelltes Element: Kinder, Stil, Text und Horcher, so viel der Bildschirmschoner braucht. */
-function element() {
-  const el = { style: {}, children: [], attrs: {}, horcher: {}, textContent: '', parent: null,
+function element(tag = 'div', merke = null) {
+  const el = { tag, style: {}, children: [], attrs: {}, horcher: {}, textContent: '', parent: null,
+    insertBefore(k, vor) { const i = el.children.indexOf(vor); el.children.splice(i < 0 ? el.children.length : i, 0, k); k.parent = el; return k; },
     appendChild(k) { el.children.push(k); k.parent = el; return k; },
     remove() { if (el.parent) { el.parent.children = el.parent.children.filter((k) => k !== el); el.parent = null; } },
     setAttribute(n, v) { el.attrs[n] = v; },
     addEventListener(n, f) { el.horcher[n] = f; },
     get firstChild() { return el.children[0] || null; },
     get lastChild() { return el.children[el.children.length - 1] || null; } };
+  if (merke) merke.push(el);
   return el;
 }
 
 /** Fenster mit stellbarer Uhr; `sockets` sind alle geöffneten Verbindungen in Reihenfolge. */
 function welt() {
   let jetzt = 1_000_000, lauf = 0;
-  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [];
+  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [], erzeugt = [];
   class Socket {
     constructor(url) { this.url = url; this.gesendet = []; this.zu = false; sockets.push(this); }
     send(text) { if (this.zu) throw new Error('zu'); this.gesendet.push(JSON.parse(text)); }
@@ -41,14 +43,14 @@ function welt() {
   const win = {
     WebSocket: Socket,
     location: { origin: 'http://symcon.test:3777', pathname: '/', hash: '#/kueche', assign: (ziel) => { gewechselt.push(ziel); } },
-    document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); }, body: element(), createElement: () => element() },
+    document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); }, body: element(), createElement: (t) => element(t, erzeugt) },
     addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); },
     setTimeout: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms }); return lauf; },
     setInterval: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms, alle: ms }); return lauf; },
     clearTimeout: (id) => timer.delete(id),
     clearInterval: (id) => timer.delete(id),
     Date: class { static now() { return jetzt; } toLocaleTimeString() { return 'ZEIT'; } toLocaleDateString() { return 'DATUM'; } },
-    JSON, Number, String, Array, Math, Error,
+    JSON, Number, String, Array, Math, Error, Boolean, encodeURIComponent,
   };
   win.window = win; win.top = win;
   const ctx = vm.createContext(win);
@@ -67,7 +69,7 @@ function welt() {
     jetzt = ziel;
   };
   const melde = (n) => (horcher[n] || []).forEach((f) => f({ type: n }));
-  return { win, sockets, lade, vor, melde, gewechselt };
+  return { win, sockets, lade, vor, melde, gewechselt, erzeugt };
 }
 
 // ── Start, Warteliste, Anmeldung ──
@@ -263,6 +265,64 @@ function welt() {
   melde('pointerdown');
   vor(7200000);
   pruefe('Ausgeschaltet: kein Bildschirmschoner von selbst', ebene(), null);
+}
+
+// ── Bildschirmschoner mit Kunstwerken ──
+{
+  const KUNST = [{ title: 'Die Sternennacht', artist: 'Vincent van Gogh', year: '1889', file: 'Van Gogh - Starry Night.jpg' },
+    { title: 'Der Schrei', artist: 'Edvard Munch', year: '1893', file: 'The Scream & more.jpg' }, { title: 'Ohne Angaben', artist: '', year: '', file: 'x.jpg' }];
+  const { win, sockets, lade, vor, melde, erzeugt } = welt();
+  lade({ art: KUNST, saver: { minutes: 1, mode: 'art', interval: 2, fill: false } });
+  const ebene = () => win.document.body.children.find((k) => k.attrs['data-visuext'] === 'saver') || null;
+  const bilder = () => erzeugt.filter((e) => e.tag === 'img');
+  const imBild = () => ebene().children.filter((k) => k.tag === 'img');
+  vor(61000);
+  const erstes = bilder()[0];
+  const datei = decodeURIComponent(erstes.src.split('FilePath/')[1].split('?')[0]);
+  pruefe('Kunst: das erste Bild wird bei Wikimedia Commons angefordert, Dateiname kodiert, feste Breite',
+    [erstes.src.startsWith('https://commons.wikimedia.org/wiki/Special:FilePath/'), KUNST.some((k) => k.file === datei), /[ &]/.test(erstes.src.split('?')[0].slice(8)), erstes.src.endsWith('?width=1280')], [true, true, false, true]);
+  pruefe('Bis es geladen ist: schwarz, ohne Uhr und ohne Beschriftung', [imBild().length, ebene().firstChild.style.display, ebene().lastChild.style.display], [0, 'none', 'none']);
+  erstes.onload();
+  vor(100);
+  const werk = KUNST.find((k) => k.file === datei);
+  pruefe('Geladen: Bild eingeblendet, mit schwarzem Rand statt Beschnitt, Beschriftung mit Titel, Künstler und Jahr',
+    [imBild().length, erstes.style.opacity, erstes.style.cssText.includes('object-fit:contain'), ebene().lastChild.textContent, ebene().lastChild.style.display],
+    [1, '1', true, [werk.title, werk.artist, werk.year].filter(Boolean).join(' · '), 'block']);
+  vor(120000);
+  const zweites = bilder()[1];
+  pruefe('Nach dem eingestellten Wechsel: ein anderes Werk wird geladen, das alte bleibt bis dahin', [bilder().length, zweites.src !== erstes.src, imBild().length], [2, true, 1]);
+  zweites.onload();
+  vor(2000);
+  pruefe('Überblendet: nur noch das neue Bild', [imBild().length, imBild()[0] === zweites, zweites.style.opacity], [1, true, '1']);
+  vor(120000);
+  bilder()[2].onerror();
+  pruefe('Lädt ein späteres Bild nicht: das gezeigte bleibt, keine Uhr', [imBild()[0] === zweites, ebene().firstChild.style.display], [true, 'none']);
+
+  const s = sockets[0];
+  s.oeffne();
+  s.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 1, mode: 'art', interval: 2, fill: true } });
+  pruefe('„Füllt den Bildschirm“ im Betrieb umgestellt: das gezeigte Bild wird beschnitten', zweites.style.objectFit, 'cover');
+  vor(120000);
+  pruefe('und neue Bilder ebenso', bilder()[bilder().length - 1].style.cssText.includes('object-fit:cover'), true);
+  const anzahl = bilder().length;
+  ebene().horcher.click();
+  vor(50000);
+  pruefe('Aufgeweckt: Ebene weg, es wird nichts mehr geladen', [ebene(), bilder().length], [null, anzahl]);
+}
+{
+  const { win, lade, vor, erzeugt } = welt();
+  lade({ art: [{ title: 'A', artist: 'B', year: '1', file: 'a.jpg' }], saver: { minutes: 1, mode: 'art', interval: 5, fill: false } });
+  vor(61000);
+  const ebene = win.document.body.children[0];
+  erzeugt.filter((e) => e.tag === 'img')[0].onerror();
+  pruefe('Kein Netz: lässt sich das erste Bild nicht laden, erscheint die Uhr', [ebene.firstChild.style.display, ebene.firstChild.firstChild.textContent, ebene.lastChild.style.display], ['block', 'ZEIT', 'none']);
+}
+{
+  const { win, lade, vor, erzeugt } = welt();
+  lade({ saver: { minutes: 1, mode: 'art', interval: 5, fill: false } });
+  vor(61000);
+  pruefe('Ohne Liste der Kunstwerke: die Uhr statt einer leeren Fläche', [erzeugt.filter((e) => e.tag === 'img').length, win.document.body.children[0].firstChild.style.display], [0, 'block']);
 }
 
 console.log(fehler ? `\n${fehler} von ${anzahl} Prüfungen fehlgeschlagen` : `\nAlle ${anzahl} Prüfungen bestanden.`);

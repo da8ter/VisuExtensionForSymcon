@@ -45,7 +45,11 @@
             "Screensaver": "Bildschirmschoner",
             "After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.": "Nach den eingestellten Minuten ohne Berührung, Klick, Taste oder Mausrad wechselt die Visualisierung auf diesem Gerät zurück auf ihre Startseite (0 = aus). Wirkt sofort.",
             "After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.": "Nach den eingestellten Minuten ohne Berührung, Klick, Taste oder Mausrad legt sich auf diesem Gerät eine Ebene über die Visualisierung (0 = aus); die erste Berührung weckt nur auf. Wirkt sofort.",
-            "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.": "Aus Skripten: VISUEXT_Wake und VISUEXT_StartScreensaver, z. B. für einen Bewegungsmelder."
+            "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.": "Aus Skripten: VISUEXT_Wake und VISUEXT_StartScreensaver, z. B. für einen Bewegungsmelder.",
+            "Artworks": "Kunstwerke",
+            "Next artwork every": "Bildwechsel alle",
+            "Artwork fills the screen": "Bild füllt den Bildschirm",
+            "Artworks: famous public-domain paintings in turn. The browser loads the images directly from Wikimedia Commons, so the device needs internet access; without it the clock is shown. \"Fills the screen\" crops the image instead of showing black bars.": "Kunstwerke: berühmte gemeinfreie Gemälde im Wechsel. Der Browser lädt die Bilder direkt bei Wikimedia Commons, das Gerät braucht dafür Internet; ohne erscheint die Uhr. „Füllt den Bildschirm“ beschneidet das Bild, statt schwarze Ränder zu zeigen."
         },
         "en": {
             "Visu Extension": "Visu Extension",
@@ -92,7 +96,11 @@
             "Screensaver": "Screensaver",
             "After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.": "After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.",
             "After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.": "After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.",
-            "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.": "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector."
+            "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.": "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.",
+            "Artworks": "Artworks",
+            "Next artwork every": "Next artwork every",
+            "Artwork fills the screen": "Artwork fills the screen",
+            "Artworks: famous public-domain paintings in turn. The browser loads the images directly from Wikimedia Commons, so the device needs internet access; without it the clock is shown. \"Fills the screen\" crops the image instead of showing black bars.": "Artworks: famous public-domain paintings in turn. The browser loads the images directly from Wikimedia Commons, so the device needs internet access; without it the clock is shown. \"Fills the screen\" crops the image instead of showing black bars."
         }
     }
 }

@@ -20,7 +20,8 @@
  * Visualisierung führt ihre Seite im Adress-Anhang (#/…); gewechselt wird über diesen Anhang.
  *
  * Und der Bildschirmschoner (C.saver, „cfg“, „saver“): eine Ebene über der ganzen Visualisierung,
- * schwarz oder mit Uhr. Eigene Elemente am body liegen über der Visualisierung und fangen Zeiger ab
+ * schwarz, mit Uhr oder mit Kunstwerken im Wechsel (C.art: gemeinfreie Gemälde, die Bilder lädt der
+ * Browser direkt bei Wikimedia Commons). Eigene Elemente am body liegen über der Visualisierung und fangen Zeiger ab
  * (gemessen 10.11.2026): Die erste Berührung weckt deshalb nur auf und löst in der Visu nichts aus.
  * Abschalten oder dimmen kann eine Seite das Display nicht, nur abdunkeln.
  */
@@ -184,7 +185,8 @@
   }
 
   // ── Bildschirmschoner ──
-  var saver = { ms: 0, mode: 'black' }, saverTimer = null, saverLayer = null, saverTick = null;
+  var saver = { ms: 0, mode: 'black', interval: 300000, fill: false }, saverTimer = null, saverLayer = null, saverTick = null;
+  var art = Array.isArray(C.art) ? C.art.slice() : [], artIndex = -1, artTimer = null, artShown = null, artFailed = false;
 
   function armSaver() {
     if (saverTimer) { clearTimeout(saverTimer); saverTimer = null; }
@@ -192,17 +194,23 @@
   }
   function setSaver(s) {
     var minutes = s && typeof s.minutes === 'number' && s.minutes > 0 ? Math.min(s.minutes, 1440) : 0;
-    var mode = s && s.mode === 'clock' ? 'clock' : 'black';
-    if (saver.ms === minutes * 60000 && saver.mode === mode) return;
-    saver = { ms: minutes * 60000, mode: mode };
-    if (saverLayer) drawSaver(); // läuft er gerade, nur den Inhalt wechseln
+    var next = {
+      ms: minutes * 60000,
+      mode: s && (s.mode === 'clock' || s.mode === 'art') ? s.mode : 'black',
+      interval: (s && typeof s.interval === 'number' && s.interval >= 1 ? Math.min(s.interval, 60) : 5) * 60000,
+      fill: !!(s && s.fill === true)
+    };
+    if (saver.ms === next.ms && saver.mode === next.mode && saver.interval === next.interval && saver.fill === next.fill) return;
+    saver = next;
+    if (saverLayer) showSaver(); // läuft er gerade, nur den Inhalt wechseln
     else armSaver();
   }
-  /* Uhr und Datum; alle Minute neu und an anderer Stelle, damit sich nichts einbrennt. */
+  /* Uhr und Datum; alle Minute neu und an anderer Stelle, damit sich nichts einbrennt. Kunstwerke
+     zeigen die Uhr nur, wenn sich kein Bild laden ließ (kein Netz). */
   function drawSaver() {
     if (!saverLayer) return;
     var box = saverLayer.firstChild;
-    if (saver.mode !== 'clock') { box.style.display = 'none'; return; }
+    if (saver.mode === 'black' || (saver.mode === 'art' && art.length && !artFailed)) { box.style.display = 'none'; return; }
     var now = new Date();
     box.style.display = 'block';
     box.firstChild.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -217,26 +225,88 @@
       box.style.top = Math.floor(Math.random() * 60) + '%';
     }
   }
+
+  /* Kunstwerke: zufällige Reihenfolge, das nächste Bild wird geladen und erst gezeigt, wenn es da
+     ist (weiches Überblenden); schlägt das Laden fehl, bleibt das alte Bild oder die Uhr. */
+  function artUrl(file) {
+    var need = Math.max((w.screen && w.screen.width) || 0, w.innerWidth || 0) * (w.devicePixelRatio || 1);
+    var width = need <= 1280 ? 1280 : need <= 1920 ? 1920 : 2560; // feste Stufen: Commons hält sie vor
+    return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file) + '?width=' + width;
+  }
+  function artImageStyle() {
+    return 'position:absolute;left:0;top:0;width:100%;height:100%;object-fit:' + (saver.fill ? 'cover' : 'contain') + ';opacity:0;transition:opacity 1.5s ease;';
+  }
+  function nextArt() {
+    if (!saverLayer || saver.mode !== 'art' || !art.length) return;
+    if (artIndex < 0 || artIndex >= art.length - 1) { // neu mischen
+      for (var i = art.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = art[i]; art[i] = art[j]; art[j] = t; }
+      artIndex = -1;
+    }
+    var work = art[++artIndex], layer = saverLayer, img = document.createElement('img');
+    img.alt = '';
+    img.style.cssText = artImageStyle();
+    img.onload = function () {
+      img.onload = img.onerror = null;
+      if (layer !== saverLayer || saver.mode !== 'art') return;
+      var old = artShown, caption = layer.lastChild;
+      layer.insertBefore(img, caption);
+      artShown = img;
+      artFailed = false;
+      caption.textContent = [work.title, work.artist, work.year].filter(Boolean).join(' · ');
+      caption.style.display = 'block';
+      drawSaver();
+      setTimeout(function () { img.style.opacity = '1'; if (old) { old.style.opacity = '0'; setTimeout(function () { old.remove(); }, 1600); } }, 30);
+    };
+    img.onerror = function () {
+      img.onload = img.onerror = null;
+      if (layer !== saverLayer) return;
+      if (!artShown) { artFailed = true; drawSaver(); } // noch kein Bild: die Uhr zeigen
+    };
+    img.src = artUrl(work.file);
+  }
+  /* Inhalt nach der Einstellung aufbauen; auch beim Umstellen im Betrieb. */
+  function showSaver() {
+    if (!saverLayer) return;
+    if (artTimer) { clearInterval(artTimer); artTimer = null; }
+    var caption = saverLayer.lastChild;
+    if (saver.mode === 'art' && art.length) {
+      if (artShown) artShown.style.objectFit = saver.fill ? 'cover' : 'contain';
+      else nextArt();
+      artTimer = setInterval(nextArt, saver.interval);
+    } else {
+      if (artShown) { artShown.remove(); artShown = null; }
+      caption.style.display = 'none';
+    }
+    drawSaver();
+  }
   function startSaver() {
     if (saverTimer) { clearTimeout(saverTimer); saverTimer = null; }
     if (saverLayer || !document.body) return;
-    var d = document, layer = d.createElement('div'), box = d.createElement('div'), time = d.createElement('div'), date = d.createElement('div');
+    var d = document, layer = d.createElement('div'), box = d.createElement('div'), time = d.createElement('div'), date = d.createElement('div'), caption = d.createElement('div');
     layer.setAttribute('data-visuext', 'saver');
-    layer.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;z-index:2147483647;background:#000;cursor:none;touch-action:none;';
-    box.style.cssText = 'position:absolute;color:#8a8a8e;font:300 16px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap;';
+    layer.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;z-index:2147483647;background:#000;cursor:none;touch-action:none;overflow:hidden;';
+    box.style.cssText = 'position:absolute;z-index:1;color:#8a8a8e;font:300 16px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap;';
     time.style.cssText = 'font-size:min(18vw,160px);font-weight:200;letter-spacing:.02em;';
     date.style.cssText = 'font-size:min(4vw,30px);margin-top:.2em;';
+    caption.style.cssText = 'display:none;position:absolute;z-index:1;left:0;right:0;bottom:0;padding:28px 20px 14px;color:rgba(255,255,255,.82);' +
+      'font:400 14px/1.3 system-ui,-apple-system,"Segoe UI",sans-serif;background:linear-gradient(transparent,rgba(0,0,0,.55));text-shadow:0 1px 2px rgba(0,0,0,.8);';
+    caption.style.display = 'none'; // erscheint erst mit dem ersten geladenen Bild
     box.appendChild(time);
     box.appendChild(date);
     layer.appendChild(box);
+    layer.appendChild(caption);
     layer.addEventListener('click', wakeSaver);
     d.body.appendChild(layer);
     saverLayer = layer;
-    drawSaver();
+    artShown = null;
+    artFailed = false;
+    showSaver();
     saverTick = setInterval(drawSaver, 60000);
   }
   function wakeSaver() {
     if (saverTick) { clearInterval(saverTick); saverTick = null; }
+    if (artTimer) { clearInterval(artTimer); artTimer = null; }
+    artShown = null;
     if (saverLayer) { saverLayer.remove(); saverLayer = null; }
     lastActivity = Date.now();
     armHome();

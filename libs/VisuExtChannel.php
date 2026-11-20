@@ -201,7 +201,7 @@ trait VisuExtChannel
     {
         return [
             'home'  => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
-            'saver' => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? ''),
+            'saver' => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? '', $device['saver']['interval'] ?? 5, $device['saver']['fill'] ?? false),
         ];
     }
 

@@ -276,7 +276,10 @@ class VisuExtension extends IPSModuleStrict
             'hook'    => '/hook/' . self::HOOK,
             'channel' => VisuExtCore::channelToken($id, (string) $device['secret']),
             'beat'    => VisuExtCore::BEAT_SECONDS,
-        ] + $this->deviceConfig($device);
+        ] + $this->deviceConfig($device) + [
+            // Kunstwerke des Bildschirmschoners: die Bilder lädt der Browser selbst bei Wikimedia Commons
+            'art' => VisuExtCore::artworks(json_decode((string) @file_get_contents(__DIR__ . '/../libs/artworks.json'), true)),
+        ];
         return str_replace('/*VISUEXT*/null',
             (string) json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_INVALID_UTF8_SUBSTITUTE),
             (string) @file_get_contents(__DIR__ . '/../libs/runtime.js'));
@@ -306,7 +309,8 @@ class VisuExtension extends IPSModuleStrict
         $saver = [];
         foreach ($this->deviceList() as $device) {
             $home[] = ['Id' => $device['id'], 'Device' => $device['name'], 'HomeMinutes' => $device['home']['minutes'], 'HomePage' => $device['home']['page']];
-            $saver[] = ['Id' => $device['id'], 'Device' => $device['name'], 'SaverMinutes' => $device['saver']['minutes'], 'SaverMode' => $device['saver']['mode']];
+            $saver[] = ['Id' => $device['id'], 'Device' => $device['name'], 'SaverMinutes' => $device['saver']['minutes'], 'SaverMode' => $device['saver']['mode'],
+                'SaverInterval' => $device['saver']['interval'], 'SaverFill' => $device['saver']['fill']];
         }
         $minutes = ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1440, 'suffix' => ' min'];
         $id = ['caption' => 'ID', 'name' => 'Id', 'width' => '0px', 'visible' => false];
@@ -341,18 +345,21 @@ class VisuExtension extends IPSModuleStrict
                 'items'   => [
                     ['type' => 'Label', 'caption' => 'After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.'],
                     ['type' => 'Label', 'caption' => 'From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.'],
+                    ['type' => 'Label', 'caption' => 'Artworks: famous public-domain paintings in turn. The browser loads the images directly from Wikimedia Commons, so the device needs internet access; without it the clock is shown. "Fills the screen" crops the image instead of showing black bars.'],
                     [
                         'type'     => 'List',
                         'name'     => 'Saver',
                         'rowCount' => 6,
                         'add'      => false,
                         'delete'   => false,
-                        'onEdit'   => 'VISUEXT_SetScreensaver($id, $Saver[\'Id\'], $Saver[\'SaverMinutes\'], $Saver[\'SaverMode\']);',
+                        'onEdit'   => 'VISUEXT_SetScreensaver($id, $Saver[\'Id\'], $Saver[\'SaverMinutes\'], $Saver[\'SaverMode\']); VISUEXT_SetScreensaverArt($id, $Saver[\'Id\'], $Saver[\'SaverInterval\'], $Saver[\'SaverFill\']);',
                         'columns'  => [
                             $device,
                             ['caption' => 'Screensaver after', 'name' => 'SaverMinutes', 'width' => '220px', 'edit' => $minutes],
                             ['caption' => 'Screensaver shows', 'name' => 'SaverMode', 'width' => '260px', 'edit' => ['type' => 'Select', 'options' => [
-                                ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock']]]],
+                                ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock'], ['caption' => 'Artworks', 'value' => 'art']]]],
+                            ['caption' => 'Next artwork every', 'name' => 'SaverInterval', 'width' => '200px', 'edit' => ['type' => 'NumberSpinner', 'minimum' => 1, 'maximum' => 60, 'suffix' => ' min']],
+                            ['caption' => 'Artwork fills the screen', 'name' => 'SaverFill', 'width' => '200px', 'edit' => ['type' => 'CheckBox']],
                             $id,
                         ],
                         'values'   => $saver,

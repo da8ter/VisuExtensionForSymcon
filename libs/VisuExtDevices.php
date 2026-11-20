@@ -88,8 +88,8 @@ trait VisuExtDevices
 
     /**
      * Bildschirmschoner: Nach $Minutes ohne Bedienung (0 = aus) legt sich auf diesem Gerät eine Ebene
-     * über die Visualisierung, $Mode „black“ (schwarz) oder „clock“ (Uhr mit Datum). Die erste
-     * Berührung weckt nur auf. Wirkt sofort.
+     * über die Visualisierung, $Mode „black“ (schwarz), „clock“ (Uhr mit Datum) oder „art“ (Kunstwerke
+     * im Wechsel, siehe SetScreensaverArt). Die erste Berührung weckt nur auf. Wirkt sofort.
      */
     public function SetScreensaver(string $DeviceID, int $Minutes, string $Mode): bool
     {
@@ -98,7 +98,30 @@ trait VisuExtDevices
             if (!isset($devices[$DeviceID])) {
                 return false;
             }
-            $devices[$DeviceID]['saver'] = VisuExtCore::cleanSaver($Minutes, $Mode);
+            $old = (array) ($devices[$DeviceID]['saver'] ?? []);
+            $devices[$DeviceID]['saver'] = VisuExtCore::cleanSaver($Minutes, $Mode, $old['interval'] ?? 5, $old['fill'] ?? false);
+            $this->saveDevices($devices);
+            return true;
+        });
+        if ($found) {
+            $this->sendConfig($DeviceID);
+        }
+        return (bool) $found;
+    }
+
+    /**
+     * Kunstwerke im Bildschirmschoner: Bildwechsel alle $IntervalMinutes (1–60) und ob das Bild den
+     * ganzen Bildschirm füllt ($Fill: beschnitten statt mit schwarzem Rand).
+     */
+    public function SetScreensaverArt(string $DeviceID, int $IntervalMinutes, bool $Fill): bool
+    {
+        $found = $this->locked(function () use ($DeviceID, $IntervalMinutes, $Fill): bool {
+            $devices = $this->devices();
+            if (!isset($devices[$DeviceID])) {
+                return false;
+            }
+            $old = (array) ($devices[$DeviceID]['saver'] ?? []);
+            $devices[$DeviceID]['saver'] = VisuExtCore::cleanSaver($old['minutes'] ?? 0, $old['mode'] ?? '', $IntervalMinutes, $Fill);
             $this->saveDevices($devices);
             return true;
         });
@@ -138,7 +161,7 @@ trait VisuExtDevices
         });
     }
 
-    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode}. Ohne Schlüssel. */
+    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode, interval, fill}. Ohne Schlüssel. */
     public function GetDevices(): string
     {
         return (string) json_encode($this->deviceList(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -237,7 +260,7 @@ trait VisuExtDevices
                 'seen'    => isset($online[$id]) ? $online[$id]['t'] : (int) ($device['seen'] ?? 0),
                 'page'    => isset($online[$id]) ? $online[$id]['page'] : '',
                 'home'    => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
-                'saver'   => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? ''),
+                'saver'   => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? '', $device['saver']['interval'] ?? 5, $device['saver']['fill'] ?? false),
             ];
         }
         return $list;

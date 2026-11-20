@@ -106,17 +106,37 @@ final class VisuExtCore
         return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)), 'page' => $page];
     }
 
-    /** Inhalte des Bildschirmschoners: schwarz oder Uhr mit Datum. */
-    public const SAVER_MODES = ['black', 'clock'];
+    /** Inhalte des Bildschirmschoners: schwarz, Uhr mit Datum oder Kunstwerke im Wechsel. */
+    public const SAVER_MODES = ['black', 'clock', 'art'];
 
     /**
-     * Bildschirmschoner eines Geräts: Minuten ohne Bedienung (0 = aus, höchstens ein Tag) und Inhalt.
-     * @return array{minutes:int,mode:string}
+     * Bildschirmschoner eines Geräts: Minuten ohne Bedienung (0 = aus, höchstens ein Tag), Inhalt, und
+     * für Kunstwerke der Bildwechsel in Minuten (1–60) und ob das Bild den Bildschirm füllt (beschnitten).
+     * @return array{minutes:int,mode:string,interval:int,fill:bool}
      */
-    public static function cleanSaver(mixed $minutes, mixed $mode): array
+    public static function cleanSaver(mixed $minutes, mixed $mode, mixed $interval = 5, mixed $fill = false): array
     {
         return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)),
-            'mode' => in_array($mode, self::SAVER_MODES, true) ? $mode : self::SAVER_MODES[0]];
+            'mode' => in_array($mode, self::SAVER_MODES, true) ? $mode : self::SAVER_MODES[0],
+            'interval' => max(1, min(60, is_numeric($interval) ? (int) $interval : 5)),
+            'fill' => $fill === true];
+    }
+
+    /**
+     * Kunstwerke für den Bildschirmschoner (libs/artworks.json): gemeinfreie Gemälde mit Titel,
+     * Künstler, Jahr und Dateiname bei Wikimedia Commons. Unbrauchbare Einträge fallen weg.
+     * @return list<array{title:string,artist:string,year:string,file:string}>
+     */
+    public static function artworks(mixed $data): array
+    {
+        $list = [];
+        foreach (is_array($data) ? $data : [] as $entry) {
+            if (is_array($entry) && is_string($entry['file'] ?? null) && preg_match('/^[^\/\\?#\x00-\x1F]{1,200}\.jpe?g$/iu', $entry['file'])) {
+                $list[] = ['title' => self::cleanPage($entry['title'] ?? ''), 'artist' => self::cleanPage($entry['artist'] ?? ''),
+                    'year' => self::cleanPage($entry['year'] ?? ''), 'file' => $entry['file']];
+            }
+        }
+        return $list;
     }
 
     /**
