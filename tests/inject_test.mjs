@@ -1,6 +1,6 @@
 // Inhaltsskripte (src/inject.js fürs Seitenfenster, src/core.js + src/bridge.js für den abgeschotteten
 // Bereich) in Headless-Chrome mit eigenem Profil, hier beide im selben Fenster. Ein Node-Server spielt
-// Visu und Hooks nach; chrome.storage ist eine Attrappe. Die echte Erweiterung prüft extension_test.mjs.
+// Visu und das Modul „Visu-Erweiterung“ nach; chrome.storage ist eine Attrappe. Die echte Erweiterung prüft extension_test.mjs.
 //   node tests/inject_test.mjs
 import http from 'node:http';
 import { spawn } from 'node:child_process';
@@ -20,34 +20,53 @@ const pruefe = (name, ist, soll) => {
 };
 
 // ── Nachgespielter Server ───────────────────────────────────────────────────────
+// Das Modul „Visu-Erweiterung“ (Vertrag 2): Beschreibung per POST mit Kennung und Schlüssel im Rumpf.
+const KEY = 'ab'.repeat(24);
 const server = { verbindungen: [], abrufe: [] };
 const LADER = '<script src="/ext/inject.js"></script>', BRUECKE = '<script src="/ext/core.js"></script><script src="/ext/bridge.js"></script>';
 const seite = (umgekehrt = false) => `<!doctype html><meta charset="utf-8"><body><div id="visu">Visu</div>
 <script>window.chrome = Object.assign(window.chrome || {}, { storage: { local: { get: function (k, cb) { ${umgekehrt ? 'setTimeout(function () {' : ''} cb({ connections: ${JSON.stringify(server.verbindungen)} }); ${umgekehrt ? '}, 30);' : ''} } } } });</script>
 ${umgekehrt ? BRUECKE + LADER : LADER + BRUECKE}</body>`;
-const skript = (name) => `window.__lauf = window.__lauf || {}; window.__lauf[${JSON.stringify(name)}] = (window.__lauf[${JSON.stringify(name)}] || 0) + 1;`;
+const skript = (name) => `(window.__lauf = window.__lauf || []).push(${JSON.stringify(name)});`;
+const BESCHREIBUNG = {
+  gut00001: { visuExtension: 2, name: 'Symcon', version: '0.2', device: { id: 'gut00001', name: 'Küche' }, scripts: ['/hook/visuext?k=script&m=0', '/hook/visuext?k=script&m=11', '/hook/visuext?k=script&m=12'] },
+  alt00001: { visuExtension: 1, name: 'Alt', scripts: ['/hook/visuext?k=script&m=11'] },
+  fremd001: { visuExtension: 2, name: 'Fremd', scripts: ['/hook/visuext?k=script&m=11', 'https://boese.example/hook/x.js'] },
+};
 const srv = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   const html = (t) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(t); };
   const js = (t) => { res.setHeader('Content-Type', 'application/javascript'); res.end(t); };
-  const json = (o) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); };
-  if (u.pathname.startsWith('/hook/')) server.abrufe.push(u.pathname + u.search);
+  if (u.pathname.startsWith('/hook/')) server.abrufe.push(req.method + ' ' + u.pathname + u.search);
   if (u.pathname === '/' || u.pathname === '/console/' || u.pathname === '/hook/seite') return html(seite());
   if (u.pathname === '/umgekehrt') return html(seite(true));
   if (u.pathname === '/rahmen') return html('<!doctype html><body><iframe id="k" src="/"></iframe></body>');
   if (u.pathname.startsWith('/ext/')) return js(readFileSync(join(ROOT, 'src', u.pathname.slice(5)), 'utf8'));
-  if (u.pathname === '/hook/a') return u.searchParams.get('t') === 'ok' ? json({ visuExtension: 1, name: 'A', scripts: ['/hook/a/start.js', '/hook/gemeinsam.js'] }) : (res.statusCode = 403, res.end());
-  if (u.pathname === '/hook/b') return json({ visuExtension: 1, name: 'B', scripts: ['/hook/b/start.js', '/hook/gemeinsam.js'] });
-  if (u.pathname === '/hook/fremd') return json({ visuExtension: 1, name: 'Fremd', scripts: ['/hook/fremd/start.js', 'https://boese.example/hook/x.js'] });
-  if (u.pathname === '/hook/alt') return json({ visuExtension: 2, name: 'Alt', scripts: ['/hook/alt/start.js'] });
-  if (u.pathname === '/hook/kaputt') return html('<html>kein JSON</html>');
-  if (u.pathname === '/hook/leer') return json({ visuExtension: 1, name: 'Leer', scripts: [], info: 'aus' });
-  const m = u.pathname.match(/^\/hook\/([a-z]+)\/start\.js$/) || u.pathname.match(/^\/hook\/(gemeinsam)\.js$/);
-  if (m) return js(skript(m[1]));
+  if (u.pathname === '/hook/visuext' && u.searchParams.get('k') === 'ext' && req.method === 'POST') {
+    let rumpf = '';
+    req.on('data', (d) => { rumpf += d; });
+    req.on('end', () => {
+      let a = {};
+      try { a = JSON.parse(rumpf); } catch { /* leer */ }
+      if (a.key !== KEY) { res.statusCode = 403; return res.end(); }
+      if (a.d === 'kaputt01') return html('<html>kein JSON</html>');
+      if (!BESCHREIBUNG[a.d]) { res.statusCode = 403; return res.end(); }
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(BESCHREIBUNG[a.d]));
+    });
+    return;
+  }
+  if (u.pathname === '/hook/visuext' && u.searchParams.get('k') === 'script') {
+    // Die Laufzeit (m=0) kommt absichtlich zuletzt an: ausgeführt werden muss sie trotzdem zuerst.
+    const m = u.searchParams.get('m');
+    return void setTimeout(() => js(skript(m)), m === '0' ? 250 : 0);
+  }
+  if (u.pathname === '/hook/b/start.js') return js(skript('b'));
   res.statusCode = 404; res.end();
 });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const ORIGIN = `http://127.0.0.1:${srv.address().port}`;
+const verbindung = (id, mehr = {}) => ({ origin: ORIGIN, id, key: KEY, name: 'Küche', server: 'Symcon', ...mehr });
 
 // ── Chrome ──────────────────────────────────────────────────────────────────────
 const profile = mkdtempSync(join(tmpdir(), 'visuext-chrome-'));
@@ -71,41 +90,42 @@ try {
     return r.result.value;
   };
   const laden = async (pfad, verbindungen) => {
-    server.verbindungen = verbindungen.map((url) => ({ url, name: 'x' }));
+    server.verbindungen = verbindungen;
     server.abrufe = [];
     await page.send('Page.navigate', { url: ORIGIN + pfad });
-    await sleep(900);
+    await sleep(1100);
   };
-  // Nach Namen sortiert: in welcher Reihenfolge die Skripte zweier Module laufen, ist nicht festgelegt.
-  const lauf = () => ev('window.__lauf ? Object.fromEntries(Object.entries(window.__lauf).sort()) : null');
+  const lauf = () => ev('window.__lauf || null');
 
-  await laden('/', [`${ORIGIN}/hook/a?t=ok`, `${ORIGIN}/hook/b`, `${ORIGIN}/hook/a?t=ok`]);
-  pruefe('Zwei Module: jedes Skript läuft genau einmal, auch das gemeinsame und bei doppelter Verbindung', await lauf(), { a: 1, b: 1, gemeinsam: 1 });
-  pruefe('Angehängte Skript-Elemente sind wieder entfernt', await ev('document.querySelectorAll("script[src^=\\"/hook/\\"], script[src*=\\"/hook/\\"]").length'), 0);
+  await laden('/', [verbindung('gut00001'), verbindung('gut00001')]);
+  pruefe('Laufzeit zuerst, dann die Module in der Reihenfolge der Beschreibung, jedes genau einmal (auch bei doppeltem Eintrag)', await lauf(), ['0', '11', '12']);
+  pruefe('Die Beschreibung wird einmal geholt, per POST', server.abrufe.filter((a) => a.includes('k=ext')), ['POST /hook/visuext?k=ext']);
+  pruefe('Der Schlüssel steht in keiner Adresse', server.abrufe.some((a) => a.includes(KEY)), false);
+  pruefe('Angehängte Skript-Elemente sind wieder entfernt', await ev('document.querySelectorAll("script[src*=\\"/hook/\\"]").length'), 0);
 
-  await laden('/umgekehrt', [`${ORIGIN}/hook/a?t=ok`, `${ORIGIN}/hook/b`]);
-  pruefe('Brücke vor dem Lader gestartet, Einstellungen kommen verzögert: läuft genauso', await lauf(), { a: 1, b: 1, gemeinsam: 1 });
+  await laden('/umgekehrt', [verbindung('gut00001')]);
+  pruefe('Brücke vor dem Lader gestartet, Einstellungen kommen verzögert: läuft genauso', await lauf(), ['0', '11', '12']);
 
   await laden('/', []);
-  await ev(`document.dispatchEvent(new CustomEvent('visu-ext:scripts', { detail: JSON.stringify(['https://boese.example/hook/x.js', '/console/x.js', 'javascript:window.__lauf={boese:1}', 5, ${JSON.stringify(ORIGIN)} + '/console/start.js', ${JSON.stringify(ORIGIN)} + '/hook/b/start.js']) })); 1`);
+  await ev(`document.dispatchEvent(new CustomEvent('visu-ext:scripts', { detail: JSON.stringify(['https://boese.example/hook/x.js', '/console/x.js', 'javascript:window.__lauf=["boese"]', 5, ${JSON.stringify(ORIGIN)} + '/console/start.js', ${JSON.stringify(ORIGIN)} + '/hook/b/start.js']) })); 1`);
   await sleep(500);
-  pruefe('Gefälschtes Ereignis der Seite: nur Adressen dieses Servers unter /hook/ werden angehängt', [await lauf(), await ev('typeof window.VisuExt')], [{ b: 1 }, 'object']);
+  pruefe('Gefälschtes Ereignis der Seite: nur Adressen dieses Servers unter /hook/ werden angehängt', [await lauf(), await ev('typeof window.VisuExt')], [['b'], 'object']);
 
-  await laden('/', [`${ORIGIN}/hook/a?t=falsch`, `${ORIGIN}/hook/kaputt`, `${ORIGIN}/hook/alt`, `${ORIGIN}/hook/leer`]);
-  pruefe('Falscher Schlüssel, kein JSON, fremde Fassung, leere Liste: nichts läuft', await lauf(), null);
+  await laden('/', [verbindung('gut00001', { key: 'cd'.repeat(24) }), verbindung('kaputt01'), verbindung('alt00001'), verbindung('unbekannt')]);
+  pruefe('Falscher Schlüssel, kein JSON, Vertrag 1, unbekanntes Gerät: nichts läuft', await lauf(), null);
 
-  await laden('/', [`${ORIGIN}/hook/fremd`]);
-  pruefe('Beschreibung mit fremdem Skript: auch das eigene läuft nicht', [await lauf(), server.abrufe], [null, ['/hook/fremd']]);
+  await laden('/', [verbindung('fremd001')]);
+  pruefe('Beschreibung mit fremdem Skript: auch das eigene läuft nicht', [await lauf(), server.abrufe], [null, ['POST /hook/visuext?k=ext']]);
 
-  await laden('/', ['http://127.0.0.1:1/hook/a?t=ok', 'kein-url', `${ORIGIN}/console/x`]);
-  pruefe('Verbindung eines anderen Servers und ungültige Einträge: kein Abruf', [await lauf(), server.abrufe], [null, []]);
+  await laden('/', [verbindung('gut00001', { origin: 'http://127.0.0.1:1' }), { url: `${ORIGIN}/hook/a?t=ok`, name: 'Vertrag 1' }, 'kein-objekt', verbindung('a b')]);
+  pruefe('Verbindung eines anderen Servers, Einträge aus Vertrag 1 und ungültige: kein Abruf', [await lauf(), server.abrufe], [null, []]);
 
-  await laden('/console/', [`${ORIGIN}/hook/b`]);
+  await laden('/console/', [verbindung('gut00001')]);
   pruefe('Verwaltungskonsole: kein Abruf', [await lauf(), server.abrufe], [null, []]);
-  await laden('/hook/seite', [`${ORIGIN}/hook/b`]);
-  pruefe('Hook-Seite: kein Abruf der Beschreibung', [await lauf(), server.abrufe], [null, ['/hook/seite']]);
+  await laden('/hook/seite', [verbindung('gut00001')]);
+  pruefe('Hook-Seite: kein Abruf der Beschreibung', [await lauf(), server.abrufe], [null, ['GET /hook/seite']]);
 
-  await laden('/rahmen', [`${ORIGIN}/hook/b`]);
+  await laden('/rahmen', [verbindung('gut00001')]);
   pruefe('In einem Rahmen (Kachel): nichts läuft', [await ev('document.getElementById("k").contentWindow.__lauf || null'), server.abrufe], [null, []]);
 } catch (e) {
   fehler++;

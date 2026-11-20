@@ -3,19 +3,40 @@
         "message": "Visu-Erweiterung für Symcon"
     },
     "extDescription": {
-        "message": "Lädt Zusatzfunktionen installierter Module in die Symcon-Visualisierung, zum Beispiel Benachrichtigungen auf jeder Seite."
+        "message": "Lädt Zusatzfunktionen aus deinem Symcon in die Visualisierung, zum Beispiel Benachrichtigungen auf jeder Seite."
     },
     "actionTitle": {
         "message": "Visu-Erweiterung einrichten"
     },
     "optIntro": {
-        "message": "Module können Zusatzfunktionen für die Visualisierung anbieten. Trage hier die Verbindungsadresse aus dem Formular des Moduls ein, mit der Adresse deiner Visualisierung davor."
+        "message": "Die Erweiterung lädt Zusatzfunktionen aus deinem Symcon in die Visualisierung. Dein Symcon braucht dafür das Modul „Visu-Erweiterung“."
+    },
+    "optStep1": {
+        "message": "In Symcon eine Instanz „Visu-Erweiterung“ anlegen und in ihrem Formular „Gerät hinzufügen“ drücken."
+    },
+    "optStep2": {
+        "message": "Hier die Adresse eintragen, unter der du die Visualisierung öffnest, und den angezeigten Code."
+    },
+    "optStep3": {
+        "message": "Den Zugriff auf diesen Server erlauben und die Visualisierung neu laden."
+    },
+    "optAddress": {
+        "message": "Adresse der Visualisierung"
     },
     "optPlaceholder": {
-        "message": "http://symcon.local:3777/hook/…"
+        "message": "http://symcon.local:3777"
+    },
+    "optCode": {
+        "message": "Code"
+    },
+    "optName": {
+        "message": "Name dieses Browsers"
+    },
+    "optNamePlaceholder": {
+        "message": "z. B. Küche"
     },
     "optAdd": {
-        "message": "Hinzufügen"
+        "message": "Verbinden"
     },
     "optCheck": {
         "message": "Prüfen"
@@ -24,16 +45,19 @@
         "message": "Entfernen"
     },
     "optEmpty": {
-        "message": "Noch keine Verbindung eingetragen."
+        "message": "Noch mit keinem Symcon verbunden."
     },
     "optUnnamed": {
-        "message": "Modul"
+        "message": "Symcon"
+    },
+    "optDevice": {
+        "message": "Dieser Browser: $1"
     },
     "optReload": {
         "message": "Nach einer Änderung die Visualisierung neu laden."
     },
     "optTrust": {
-        "message": "Trage nur Adressen von Modulen ein, denen du vertraust: Ihr Code läuft in deiner Visualisierung. Die Adresse enthält den Zugriffsschlüssel des Moduls."
+        "message": "Verbinde nur dein eigenes Symcon: Der Code der dort angedockten Module läuft in deiner Visualisierung. Der Schlüssel dieses Browsers bleibt hier gespeichert und wird nicht synchronisiert. In Symcon kannst du den Browser jederzeit sperren oder entfernen."
     },
     "stChecking": {
         "message": "Wird geprüft …"
@@ -41,31 +65,40 @@
     "stConnected": {
         "message": "Verbunden"
     },
-    "stNoScripts": {
-        "message": "Verbunden, aber das Modul bietet gerade nichts an."
+    "stDenied": {
+        "message": "Symcon kennt diesen Browser nicht mehr oder hat ihn gesperrt. Entfernen und neu verbinden."
     },
     "stHttp": {
-        "message": "Der Server antwortet mit Fehler $1. Stimmt die Adresse noch?"
+        "message": "Der Server antwortet mit Fehler $1."
     },
     "stUnreachable": {
         "message": "Der Server ist nicht erreichbar."
     },
     "stInvalid": {
-        "message": "Unter dieser Adresse liegt keine Beschreibung für die Visu-Erweiterung."
+        "message": "Der Server antwortet nicht wie eine Visu-Erweiterung dieser Fassung. Modul und Erweiterung aktualisieren."
     },
     "stForeign": {
-        "message": "Abgelehnt: Das Modul nennt ein Skript, das nicht auf diesem Server unter /hook/ liegt."
+        "message": "Abgelehnt: Symcon nennt ein Skript, das nicht auf diesem Server unter /hook/ liegt."
     },
     "errAddress": {
-        "message": "Das ist keine gültige Verbindungsadresse. Sie beginnt mit der Adresse der Visualisierung und führt nach /hook/…"
+        "message": "Das ist keine gültige Adresse. Gib die Adresse ein, unter der du die Visualisierung öffnest, zum Beispiel http://symcon.local:3777"
+    },
+    "errCode": {
+        "message": "Der Code besteht aus sechs Ziffern."
     },
     "errDuplicate": {
-        "message": "Diese Adresse ist schon eingetragen."
+        "message": "Dieser Browser ist mit diesem Server schon verbunden. Entferne die Verbindung, um neu zu koppeln."
     },
     "errPermission": {
         "message": "Ohne die Freigabe für diesen Server kann die Erweiterung dort nichts laden."
     },
+    "errPairDenied": {
+        "message": "Der Code ist falsch oder abgelaufen. Im Formular der Visu-Erweiterung „Gerät hinzufügen“ drücken und den neuen Code eintragen."
+    },
+    "errPairMissing": {
+        "message": "Auf diesem Server antwortet kein Modul „Visu-Erweiterung“. Ist es installiert und eine Instanz angelegt?"
+    },
     "errNoManifest": {
-        "message": "Nicht hinzugefügt. $1"
+        "message": "Nicht verbunden. $1"
     }
 }

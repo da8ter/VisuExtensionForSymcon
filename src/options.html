@@ -10,8 +10,10 @@
   h1 { font-size: 21px; margin: 0 0 4px; }
   p { margin: 8px 0; }
   .muted { color: var(--muted); }
-  form { display: flex; gap: 8px; margin: 20px 0 6px; }
-  input { flex: 1; min-width: 0; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: inherit; }
+  form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 20px 0 6px; }
+  .feld { flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  .feld.breit { flex-basis: 100%; }
+  input { min-width: 0; font: 14px/1.4 ui-monospace, Menlo, Consolas, monospace; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
   button { padding: 8px 16px; border: 0; border-radius: 10px; font: inherit; font-weight: 650; cursor: pointer; background: var(--surface); color: inherit; }
   button.primary { background: var(--akzent); color: #fff; }
   #meldung { min-height: 22px; color: var(--rot); }
@@ -28,8 +30,14 @@
 <body>
 <h1 data-i18n="extName"></h1>
 <p class="muted" data-i18n="optIntro"></p>
+<ol class="muted"><li data-i18n="optStep1"></li><li data-i18n="optStep2"></li><li data-i18n="optStep3"></li></ol>
 <form id="neu">
-  <input id="adresse" type="text" spellcheck="false" autocomplete="off" data-i18n-placeholder="optPlaceholder">
+  <label class="feld breit"><span data-i18n="optAddress"></span>
+    <input id="adresse" type="text" spellcheck="false" autocomplete="off" data-i18n-placeholder="optPlaceholder"></label>
+  <label class="feld"><span data-i18n="optCode"></span>
+    <input id="code" type="text" inputmode="numeric" spellcheck="false" autocomplete="off" maxlength="9" placeholder="123 456"></label>
+  <label class="feld"><span data-i18n="optName"></span>
+    <input id="name" type="text" maxlength="40" autocomplete="off" data-i18n-placeholder="optNamePlaceholder"></label>
   <button class="primary" type="submit" data-i18n="optAdd"></button>
 </form>
 <div id="meldung" role="alert"></div>

@@ -5,9 +5,9 @@
  *   inject.js  im Fenster der Seite (MAIN): hängt die Skripte der Module an. Nur dort gilt die
  *              Sicherheitsrichtlinie der Seite; im abgeschotteten Bereich der Erweiterung lässt Chrome
  *              Skripte nur von localhost und 127.0.0.1 zu.
- *   bridge.js  im abgeschotteten Bereich (ISOLATED): liest die Verbindungen aus chrome.storage, holt
- *              und prüft die Beschreibungen und reicht die Skript-Adressen an inject.js weiter, das
- *              auf chrome.storage keinen Zugriff hat.
+ *   bridge.js  im abgeschotteten Bereich (ISOLATED): liest die Verbindung aus chrome.storage, holt
+ *              und prüft die Beschreibung und reicht die Skript-Adressen an inject.js weiter, das
+ *              auf chrome.storage und damit auf den Geräteschlüssel keinen Zugriff hat.
  * Keine Datei in beiden Anmeldungen: Chrome führt sie sonst nur in einem der Bereiche aus (gemessen
  * mit Chrome 157: core.js lief im Fenster der Seite nicht).
  */
@@ -18,7 +18,7 @@
     var m = [];
     (connections || []).forEach(function (c) {
       var u;
-      try { u = new URL(c.url); } catch (e) { return; }
+      try { u = new URL(c.origin); } catch (e) { return; }
       var p = u.origin + '/*';
       if (m.indexOf(p) < 0) m.push(p);
     });

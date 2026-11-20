@@ -21,16 +21,39 @@ const pruefe = (name, ist, soll) => {
   if (a !== b) { fehler++; console.log(`FEHL ${name}\n     ist:  ${a}\n     soll: ${b}`); } else console.log(`OK   ${name}`);
 };
 
-// ── Nachgespielter Symcon-Server ────────────────────────────────────────────────
+// ── Nachgespieltes Modul „Visu-Erweiterung“ (Vertrag 2) ─────────────────────────
+const KEY = 'ab'.repeat(24), ID = 'ab12cd34';
+const symcon = { gesperrt: false, anfragen: [] };
 const srv = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   const json = (o) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); };
   const html = (t) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end(t); };
+  const js = (t) => { res.setHeader('Content-Type', 'application/javascript'); res.end(t); };
+  const status = (n) => { res.statusCode = n; res.end(); };
+  symcon.anfragen.push(req.method + ' ' + req.url);
   if (u.pathname === '/') return html('<!doctype html><meta charset="utf-8"><title>Visu</title><body><div id="visu">Visu</div><iframe id="k" src="/kachel"></iframe></body>');
   if (u.pathname === '/kachel' || u.pathname === '/console/') return html('<!doctype html><title>x</title><body>x</body>');
-  if (u.pathname === '/hook/a') return u.searchParams.get('t') === 'ok' ? json({ visuExtension: 1, name: 'Probe-Modul', version: '1.0', scripts: ['/hook/a/start.js?t=ok'] }) : (res.statusCode = 403, res.end());
-  if (u.pathname === '/hook/a/start.js') { res.setHeader('Content-Type', 'application/javascript'); return res.end('window.__lauf = (window.__lauf || 0) + 1;'); }
-  res.statusCode = 404; res.end();
+  if (u.pathname !== '/hook/visuext') return status(404);
+  const k = u.searchParams.get('k');
+  if (k === 'script') {
+    // Die Laufzeit (m=0) antwortet später als das Modul: ausgeführt werden muss sie trotzdem zuerst.
+    const m = u.searchParams.get('m');
+    return void setTimeout(() => js(`(window.__lauf = window.__lauf || []).push(${JSON.stringify(m)});`), m === '0' ? 250 : 0);
+  }
+  if (req.method !== 'POST') return status(404);
+  let rumpf = '';
+  req.on('data', (d) => { rumpf += d; });
+  req.on('end', () => {
+    let a = {};
+    try { a = JSON.parse(rumpf); } catch { /* leer */ }
+    if (k === 'pair') return a.code === '123456' ? json({ ok: true, visuExtension: 2, device: { id: ID, name: a.name || 'Browser' }, key: KEY, address: '/hook/visuext' }) : status(403);
+    if (k === 'ext') {
+      if (a.d !== ID || a.key !== KEY || symcon.gesperrt) return status(403);
+      return json({ visuExtension: 2, name: 'Symcon Zuhause', version: '0.2', device: { id: ID, name: 'Küche' },
+        scripts: [`/hook/visuext?k=script&d=${ID}&m=0&e=1&s=x`, `/hook/visuext?k=script&d=${ID}&m=12345&e=1&s=x`] });
+    }
+    status(404);
+  });
 });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const ORIGIN = `http://symcon.test:${srv.address().port}`;
@@ -86,44 +109,73 @@ try {
   pruefe('Erweiterung geladen', typeof geladen.id === 'string' && geladen.id.length > 10, true);
   await sleep(1500);
 
-  // Einrichtung: Verbindung hinzufügen
+  // Einrichtung: koppeln (die Seite der Erweiterung ruft einen fremden Server)
   const opt = await seite(`chrome-extension://${geladen.id}/options.html`);
   await sleep(800);
-  await opt.ev(`document.getElementById('adresse').value = ${JSON.stringify(ORIGIN + '/hook/a?t=ok')}; document.getElementById('neu').requestSubmit(); 1`, true);
-  await sleep(1500);
-  pruefe('Einrichtung: Verbindung mit Name und „Verbunden“',
-    await opt.ev(`[document.getElementById('meldung').textContent].concat(Array.prototype.map.call(document.querySelectorAll('.zeile'), (z) => z.querySelector('.name').textContent + ' | ' + z.querySelector('.status').textContent))`),
-    ['', 'Probe-Modul | ' + TEXTE.stConnected.message + ' · 1.0']);
-  pruefe('Inhaltsskripte angemeldet: eines im Fenster der Seite, eines mit Zugriff auf die Einstellungen',
-    await opt.ev(`chrome.scripting.getRegisteredContentScripts().then((l) => l.map((s) => [s.world, s.js.join('+'), s.matches.join(' ')]).sort())`),
-    [['ISOLATED', 'core.js+bridge.js', ORIGIN + '/*'], ['MAIN', 'inject.js', ORIGIN + '/*']]);
+  const koppeln = async (code) => {
+    await opt.ev(`document.getElementById('adresse').value = ${JSON.stringify(ORIGIN)}; document.getElementById('code').value = ${JSON.stringify(code)};
+      document.getElementById('name').value = 'Küche'; document.getElementById('neu').requestSubmit(); 1`, true);
+    await sleep(1800);
+  };
+  const stand = () => opt.ev(`[document.getElementById('meldung').textContent].concat(Array.prototype.map.call(document.querySelectorAll('.zeile'), (z) => z.querySelector('.name').textContent + ' | ' + z.querySelector('.ort').textContent + ' | ' + z.querySelector('.status').textContent))`);
+  const angemeldet = () => opt.ev(`chrome.scripting.getRegisteredContentScripts().then((l) => l.map((s) => [s.world, s.js.join('+'), s.matches.join(' ')]).sort())`);
 
-  // Visu: das Skript des Moduls muss laufen, obwohl der Server nicht localhost heißt
+  await koppeln('999999');
+  pruefe('Einrichtung: falscher Code wird als solcher gemeldet (Antwort des fremden Servers lesbar), nichts angemeldet',
+    [await stand(), await angemeldet()], [[TEXTE.errNoManifest.message.replace('$1', TEXTE.errPairDenied.message)], []]);
+  await koppeln('123456');
+  pruefe('Einrichtung: gekoppelt, Zeile mit Servername, Browsername und „Verbunden“',
+    await stand(), ['', `Symcon Zuhause | ${ORIGIN} · ${TEXTE.optDevice.message.replace('$1', 'Küche')} | ${TEXTE.stConnected.message} · 0.2`]);
+  pruefe('Inhaltsskripte angemeldet: eines im Fenster der Seite, eines mit Zugriff auf die Einstellungen',
+    await angemeldet(), [['ISOLATED', 'core.js+bridge.js', ORIGIN + '/*'], ['MAIN', 'inject.js', ORIGIN + '/*']]);
+  pruefe('Gespeichert in chrome.storage.local: eine Verbindung mit Kennung und Schlüssel',
+    await opt.ev(`chrome.storage.local.get('connections').then((r) => r.connections.map((c) => [c.origin, c.id, c.key.length, c.name, c.server]))`), [[ORIGIN, ID, 48, 'Küche', 'Symcon Zuhause']]);
+  pruefe('Keine Voranfrage (OPTIONS) an den Server', symcon.anfragen.filter((a) => a.startsWith('OPTIONS')).length, 0);
+
+  // Visu: Laufzeit und Modul müssen laufen, obwohl der Server nicht localhost heißt
+  symcon.anfragen = [];
   const visu = await seite(ORIGIN + '/');
-  await sleep(2000);
-  pruefe('Visu: Skript des Moduls läuft genau einmal, nicht im Rahmen, keine Reste im Fenster',
-    [await visu.ev('window.__lauf || 0'), await visu.ev('document.getElementById("k").contentWindow.__lauf || 0'), await visu.ev('typeof window.VisuExt')], [1, 0, 'undefined']);
+  await sleep(2200);
+  pruefe('Visu: Laufzeit vor dem Modul, jedes genau einmal, nicht im Rahmen, keine Reste im Fenster',
+    [await visu.ev('window.__lauf || null'), await visu.ev('document.getElementById("k").contentWindow.__lauf || null'), await visu.ev('typeof window.VisuExt')], [['0', '12345'], null, 'undefined']);
+  pruefe('Visu: Beschreibung einmal per POST geholt, der Schlüssel in keiner Adresse',
+    [symcon.anfragen.filter((a) => a.includes('k=ext')), symcon.anfragen.some((a) => a.includes(KEY))], [['POST /hook/visuext?k=ext'], false]);
+  pruefe('Visu: Der Schlüssel ist aus dem Fenster der Seite nicht erreichbar',
+    await visu.ev('[typeof (window.chrome && window.chrome.storage), document.documentElement.outerHTML.includes(' + JSON.stringify(KEY) + ')]'), ['undefined', false]);
   pruefe('Visu: kein Verstoß gegen eine Sicherheitsrichtlinie', log.filter((t) => /Content Security Policy/i.test(t)).length, 0);
   await visu.zu();
 
   const konsole = await seite(ORIGIN + '/console/');
   await sleep(1200);
-  pruefe('Verwaltungskonsole: nichts läuft', await konsole.ev('window.__lauf || 0'), 0);
+  pruefe('Verwaltungskonsole: nichts läuft', await konsole.ev('window.__lauf || null'), null);
   await konsole.zu();
+
+  // In Symcon gesperrt: nichts läuft mehr, die Einrichtung sagt es
+  symcon.gesperrt = true;
+  const gesperrt = await seite(ORIGIN + '/');
+  await sleep(1500);
+  pruefe('Gesperrt: in der Visu läuft nichts', await gesperrt.ev('window.__lauf || null'), null);
+  await gesperrt.zu();
+  await opt.ev(`document.querySelectorAll('.zeile button')[0].click(); 1`, true);
+  await sleep(1000);
+  pruefe('Gesperrt: Die Einrichtung nennt den Grund', (await stand())[1].split(' | ')[2], TEXTE.stDenied.message);
+  symcon.gesperrt = false;
 
   // Entfernen: danach lädt die Visu nichts mehr
   await opt.ev(`document.querySelectorAll('.zeile button')[1].click(); 1`, true);
   await sleep(1000);
-  pruefe('Entfernt: keine Inhaltsskripte mehr angemeldet', await opt.ev(`chrome.scripting.getRegisteredContentScripts().then((l) => l.length)`), 0);
+  pruefe('Entfernt: keine Inhaltsskripte mehr angemeldet, nichts mehr gespeichert',
+    [await opt.ev(`chrome.scripting.getRegisteredContentScripts().then((l) => l.length)`), await opt.ev(`chrome.storage.local.get('connections').then((r) => r.connections.length)`)], [0, 0]);
+  symcon.anfragen = [];
   const danach = await seite(ORIGIN + '/');
   await sleep(1500);
-  pruefe('Entfernt: in der Visu läuft nichts mehr', await danach.ev('window.__lauf || 0'), 0);
+  pruefe('Entfernt: in der Visu läuft nichts mehr, keine Anfrage an den Hook', [await danach.ev('window.__lauf || null'), symcon.anfragen.filter((a) => a.includes('/hook/'))], [null, []]);
 } catch (e) {
   fehler++;
   console.log('FEHL Ablauf: ' + e.message);
 } finally {
   const csp = log.filter((t) => /Content Security Policy/i.test(t));
-  if (csp.length) console.log('     Chrome meldet: ' + csp[0].replace(/t=[0-9a-z]+/g, 't=…').slice(0, 260));
+  if (csp.length) console.log('     Chrome meldet: ' + csp[0].slice(0, 260));
   await aufraeumen();
 }
 console.log(`\n${anzahl} Zusicherungen, ${fehler} Abweichung(en).`);

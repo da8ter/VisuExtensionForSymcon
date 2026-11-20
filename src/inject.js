@@ -27,6 +27,7 @@
     geladen[src] = true;
     var s = document.createElement('script');
     s.src = src;
+    s.async = false; // in der Reihenfolge der Beschreibung ausführen: die Laufzeit zuerst
     s.onload = s.onerror = function () { s.onload = s.onerror = null; s.remove(); };
     (document.head || document.documentElement).appendChild(s);
   }

@@ -3,19 +3,40 @@
         "message": "Visu Extension for Symcon"
     },
     "extDescription": {
-        "message": "Loads add-on features of installed modules into the Symcon visualization, for example notifications on every page."
+        "message": "Loads add-on features from your Symcon into the visualization, for example notifications on every page."
     },
     "actionTitle": {
         "message": "Set up Visu Extension"
     },
     "optIntro": {
-        "message": "Modules can offer add-on features for the visualization. Enter the connection address from the module's form here, with the address of your visualization in front."
+        "message": "The extension loads add-on features from your Symcon into the visualization. Your Symcon needs the module \"Visu Extension\" for this."
+    },
+    "optStep1": {
+        "message": "In Symcon, create an instance \"Visu Extension\" and press \"Add device\" in its form."
+    },
+    "optStep2": {
+        "message": "Enter the address you open the visualization with, and the code shown there."
+    },
+    "optStep3": {
+        "message": "Allow access to this server and reload the visualization."
+    },
+    "optAddress": {
+        "message": "Address of the visualization"
     },
     "optPlaceholder": {
-        "message": "http://symcon.local:3777/hook/…"
+        "message": "http://symcon.local:3777"
+    },
+    "optCode": {
+        "message": "Code"
+    },
+    "optName": {
+        "message": "Name of this browser"
+    },
+    "optNamePlaceholder": {
+        "message": "e.g. Kitchen"
     },
     "optAdd": {
-        "message": "Add"
+        "message": "Connect"
     },
     "optCheck": {
         "message": "Check"
@@ -24,16 +45,19 @@
         "message": "Remove"
     },
     "optEmpty": {
-        "message": "No connection yet."
+        "message": "Not connected to any Symcon yet."
     },
     "optUnnamed": {
-        "message": "Module"
+        "message": "Symcon"
+    },
+    "optDevice": {
+        "message": "This browser: $1"
     },
     "optReload": {
         "message": "Reload the visualization after a change."
     },
     "optTrust": {
-        "message": "Only enter addresses of modules you trust: their code runs in your visualization. The address contains the module's access key."
+        "message": "Only connect your own Symcon: the code of the modules docked there runs in your visualization. The key of this browser stays stored here and is not synced. In Symcon you can block or remove the browser at any time."
     },
     "stChecking": {
         "message": "Checking …"
@@ -41,31 +65,40 @@
     "stConnected": {
         "message": "Connected"
     },
-    "stNoScripts": {
-        "message": "Connected, but the module offers nothing right now."
+    "stDenied": {
+        "message": "Symcon no longer knows this browser or has blocked it. Remove it and connect again."
     },
     "stHttp": {
-        "message": "The server answers with error $1. Is the address still correct?"
+        "message": "The server answers with error $1."
     },
     "stUnreachable": {
         "message": "The server cannot be reached."
     },
     "stInvalid": {
-        "message": "There is no description for the Visu Extension at this address."
+        "message": "The server does not answer like a Visu Extension of this version. Update the module and the extension."
     },
     "stForeign": {
-        "message": "Rejected: the module names a script that is not on this server under /hook/."
+        "message": "Rejected: Symcon names a script that is not on this server under /hook/."
     },
     "errAddress": {
-        "message": "This is not a valid connection address. It starts with the address of the visualization and leads to /hook/…"
+        "message": "This is not a valid address. Enter the address you open the visualization with, for example http://symcon.local:3777"
+    },
+    "errCode": {
+        "message": "The code has six digits."
     },
     "errDuplicate": {
-        "message": "This address is already in the list."
+        "message": "This browser is already connected to this server. Remove the connection to pair again."
     },
     "errPermission": {
         "message": "Without access to this server the extension cannot load anything there."
     },
+    "errPairDenied": {
+        "message": "The code is wrong or has expired. Press \"Add device\" in the form of the Visu Extension and enter the new code."
+    },
+    "errPairMissing": {
+        "message": "No module \"Visu Extension\" answers on this server. Is it installed and is there an instance?"
+    },
     "errNoManifest": {
-        "message": "Not added. $1"
+        "message": "Not connected. $1"
     }
 }

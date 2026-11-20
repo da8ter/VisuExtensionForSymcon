@@ -1,7 +1,7 @@
 /* Visu-Erweiterung für Symcon: läuft im abgeschotteten Bereich der Erweiterung (ISOLATED).
- * Liest die Verbindungen dieses Servers aus chrome.storage, holt je Verbindung die Beschreibung des
- * Moduls, prüft sie (core.js) und reicht die zulässigen Skript-Adressen an inject.js im Fenster der
- * Seite weiter. Übergabe als Text über DOM-Ereignisse; die Reihenfolge der beiden Skripte ist nicht
+ * Liest die Verbindung dieses Servers aus chrome.storage, holt die Beschreibung vom Modul
+ * „Visu-Erweiterung“ (Vertrag 2), prüft sie (core.js) und reicht die zulässigen Skript-Adressen an
+ * inject.js im Fenster der Seite weiter. Der Geräteschlüssel bleibt in diesem Bereich. Übergabe als Text über DOM-Ereignisse; die Reihenfolge der beiden Skripte ist nicht
  * festgelegt, deshalb fragt jede Seite einmal nach der anderen (ask/ready). */
 (function () {
   'use strict';
@@ -25,11 +25,12 @@
 
   chrome.storage.local.get('connections', function (r) {
     var geholt = {};
-    ((r && r.connections) || []).forEach(function (c) {
-      var a = core.parseAddress(c && c.url);
-      if (!a.ok || a.origin !== location.origin || geholt[a.url]) return;
-      geholt[a.url] = true;
-      fetch(a.url, { cache: 'no-store', credentials: 'same-origin' })
+    ((r && r.connections) || []).forEach(function (roh) {
+      var c = core.checkConnection(roh);
+      if (!c || c.origin !== location.origin || geholt[c.id]) return;
+      geholt[c.id] = true;
+      var anfrage = core.manifestRequest(c);
+      fetch(anfrage.url, anfrage.init)
         .then(function (res) { return res.ok ? res.json() : null; })
         .then(function (data) {
           var m = data ? core.checkManifest(data, location.origin) : null;
