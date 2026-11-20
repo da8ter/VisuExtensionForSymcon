@@ -1,6 +1,6 @@
 # Plan: Vertrag 2 – ein Symcon-Modul als einzige Verbindung
 
-Stand: 20.11.2026. Die Schritte 1 bis 4 sind erledigt (Messung, Symcon-Modul, Erweiterung, erste Module angedockt); was Modul und Erweiterung tun, steht in [vertrag-2.md](vertrag-2.md), das Andocken in [entwickler.md](entwickler.md). Offen: Rücksprung und Wächter. Der Name bleibt beim Arbeitstitel „Visu-Erweiterung“.
+Stand: 20.11.2026. Die Schritte 1 bis 4 sind erledigt (Messung, Symcon-Modul, Erweiterung, erste Module angedockt); was Modul und Erweiterung tun, steht in [vertrag-2.md](vertrag-2.md), das Andocken in [entwickler.md](entwickler.md). Schritt 5 ist mit dem Rücksprung zur Startseite abgeschlossen; der Wächter wird nicht gebaut. Der Name bleibt beim Arbeitstitel „Visu-Erweiterung“.
 
 ## Ziel
 
@@ -68,7 +68,7 @@ Die Prüfregeln bleiben: Verbindung und Skripte nur unter `/hook/` auf demselben
 1. **Benachrichtigungs-Kachel** andocken (bestehender Code, eigener `k=ext` entfällt).
 2. **Visu-Steuerung** (eingebaut in die Visu-Erweiterung):
    - Zurück zur Startseite nach X Minuten ohne Berührung (je Gerät).
-   - Wächter: Seite neu laden, wenn die Verbindung zu Symcon abreißt oder die Seite hängt.
+   - ~~Wächter: Seite neu laden, wenn die Verbindung zu Symcon abreißt oder die Seite hängt.~~ Entfällt (Nutzerentscheid 20.11.2026).
    - Später: Seite aus Symcon ansteuern, Bildschirmschoner/Nachtmodus, Bildschirm wach halten, Gerätestatus.
 
 ## Entscheidungen (Nutzer, 20.11.2026)
@@ -113,4 +113,4 @@ Nicht gemessen: Dauerbetrieb über Stunden, mehrere Dutzend Geräte gleichzeitig
 2. ~~Symcon-Modul: Hook, Kopplung, Geräteliste, Datenfluss zum Andocken, Auslieferung.~~ Erledigt am 20.11.2026 (`VisuExtension/`, `libs/`, Tests in `tests/modul/` und `tests/runtime_test.mjs`). Abweichungen vom Entwurf oben: fester Hook `/hook/visuext` und eine Instanz je Symcon (das Koppeln braucht so keine Instanz-ID); die Beschreibung nennt keinen Kanal, die Laufzeit kennt ihn; Skript-Adressen tragen ein Ticket statt des Schlüssels; Freigaben als Sperrliste je Gerät.
 3. ~~Erweiterung auf Vertrag 2 umbauen, Vertrag 1 entfernen, Tests anpassen.~~ Erledigt am 20.11.2026 (Fassung 0.2.0). Einrichtung: Adresse der Visualisierung, Code, Name; eine Verbindung je Server als `{origin, id, key, name, server}`. Die Beschreibung holt die Erweiterung per POST mit Kennung und Schlüssel im Rumpf (als Text, ohne Voranfrage), die Skripte laufen in der Reihenfolge der Beschreibung. Höchstens 16 Skripte. Mit der echten Erweiterung an einem laufenden Symcon geprüft, direkt und über Symcon Connect.
 4. ~~Benachrichtigungs-Kachel andocken (ebenso die Klebezettel, die Vertrag 1 auch sprachen).~~ Erledigt am 20.11.2026, jeweils im Repo des Moduls. Beide beantworten `Describe` und `Script`; ihre Daten holen die Skripte weiter über den eigenen Hook des Moduls. Über den Kanal schickt das Modul nur einen Anstoß (`{seq}`), das Skript fragt dann sofort statt im Takt: gemessen unter einer Sekunde bei 60 Sekunden Abfrage-Intervall. Ohne Visu-Erweiterung arbeiten beide wie zuvor. An einem laufenden Symcon geprüft, beide Module zugleich über eine Verbindung.
-5. Visu-Steuerung. **Rücksprung zur Startseite** gebaut am 20.11.2026: Einstellung je Gerät (`VISUEXT_SetReturnHome`, Spalten im Formular), die Laufzeit misst die Bedienpause und wechselt über den Adress-Anhang; Nachricht `cfg` bringt Änderungen sofort aufs Gerät. Offen: der Wächter (neu laden, wenn die Verbindung abreißt oder die Seite hängt).
+5. Visu-Steuerung. **Rücksprung zur Startseite** gebaut am 20.11.2026: Einstellung je Gerät (`VISUEXT_SetReturnHome`, Spalten im Formular), die Laufzeit misst die Bedienpause und wechselt über den Adress-Anhang; Nachricht `cfg` bringt Änderungen sofort aufs Gerät. Der Wächter (neu laden, wenn die Verbindung abreißt oder die Seite hängt) wird nicht gebaut (Nutzerentscheid 20.11.2026).
