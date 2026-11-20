@@ -1,0 +1,12 @@
+{
+    "id": "{F333B39E-C5DD-4505-9BD8-411A5629BF30}",
+    "author": "Stephan Sprick",
+    "name": "Visu Extension",
+    "url": "https://github.com/da8ter/VisuExtensionForSymcon",
+    "compatibility": {
+        "version": "8.1"
+    },
+    "version": "0.2",
+    "build": 1,
+    "date": 1795129200
+}

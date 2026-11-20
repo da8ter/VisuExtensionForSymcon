@@ -1,0 +1,12 @@
+{
+    "id": "{CB9C6C38-9B97-45CA-BFB5-EC7F936AF3FF}",
+    "name": "Visu Extension",
+    "type": 2,
+    "vendor": "",
+    "aliases": [],
+    "parentRequirements": [],
+    "childRequirements": ["{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}"],
+    "implemented": ["{A5B87602-1C34-4981-89A5-62A0735CB359}"],
+    "prefix": "VISUEXT",
+    "url": "https://github.com/da8ter/VisuExtensionForSymcon"
+}
