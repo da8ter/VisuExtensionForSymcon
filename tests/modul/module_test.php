@@ -280,10 +280,13 @@ $e = $x->clock + 60;
 [, $laufzeit] = $x->http(['k' => 'script', 'd' => $id, 'm' => '0', 'e' => (string) $e, 's' => VisuExtCore::ticket($id, $x->devs()[$id]['secret'], 0, $e)]);
 check(str_contains($laufzeit, '"home":{"minutes":5,"page":"/#/start"}'), 'Rücksprung: die Laufzeit trägt die Einstellung schon beim Laden');
 check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black']], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
-$bereich = array_values(array_filter(json_decode($x->GetConfigurationForm(), true)['actions'], static fn (array $a): bool => ($a['type'] ?? '') === 'ExpansionPanel'))[0];
-$zeile = array_values(array_filter($bereich['items'], static fn (array $a): bool => ($a['name'] ?? '') === 'Kiosk'))[0];
-check($zeile['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'HomeMinutes' => 5, 'HomePage' => '/#/start', 'SaverMinutes' => 0, 'SaverMode' => 'black']
-    && str_contains($zeile['onEdit'], 'VISUEXT_SetReturnHome') && str_contains($zeile['onEdit'], 'VISUEXT_SetScreensaver'), 'Rücksprung und Bildschirmschoner: eigener Aufklappbereich, je Gerät einstellbar');
+$bereiche = array_values(array_filter(json_decode($x->GetConfigurationForm(), true)['actions'], static fn (array $a): bool => ($a['type'] ?? '') === 'ExpansionPanel'));
+$listeIn = static fn (array $bereich): array => array_values(array_filter($bereich['items'], static fn (array $a): bool => ($a['type'] ?? '') === 'List'))[0];
+check(array_column($bereiche, 'caption') === ['Return to start page', 'Screensaver'], 'Rücksprung und Bildschirmschoner: je ein eigener Aufklappbereich');
+check($listeIn($bereiche[0])['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'HomeMinutes' => 5, 'HomePage' => '/#/start']
+    && $listeIn($bereiche[0])['onEdit'] === 'VISUEXT_SetReturnHome($id, $Home[\'Id\'], $Home[\'HomeMinutes\'], $Home[\'HomePage\']);', 'Rücksprung: je Gerät einstellbar');
+check($listeIn($bereiche[1])['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'SaverMinutes' => 0, 'SaverMode' => 'black']
+    && $listeIn($bereiche[1])['onEdit'] === 'VISUEXT_SetScreensaver($id, $Saver[\'Id\'], $Saver[\'SaverMinutes\'], $Saver[\'SaverMode\']);', 'Bildschirmschoner: je Gerät einstellbar');
 
 // ── Bildschirmschoner ──
 check(VisuExtCore::cleanSaver(10, 'clock') === ['minutes' => 10, 'mode' => 'clock'] && VisuExtCore::cleanSaver(-1, 'disco') === ['minutes' => 0, 'mode' => 'black']

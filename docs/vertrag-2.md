@@ -65,7 +65,7 @@ Bleibt das Lebenszeichen 90 Sekunden aus, gilt die Verbindung für Symcon als ge
 - **Angedockte Module** und, sobald es beides gibt, **welches Modul auf welchem Gerät läuft** (Vorgabe: jedes auf jedem).
 - **Zurück zur Startseite** je Gerät: Nach den eingestellten Minuten ohne Berührung, Taste oder Mausrad wechselt die Visualisierung zurück auf ihre Startseite (0 = aus). Ohne eigene Angabe ist das die Seite, mit der sie geladen wurde; sonst die Adresse wie in der Spalte „Seite“, zum Beispiel `/#/12345`. Die Laufzeit misst die Bedienpause im Browser und wechselt über den Adress-Anhang; die Einstellung wirkt sofort, auch auf einer geöffneten Visualisierung.
 - **Bildschirmschoner** je Gerät: Nach den eingestellten Minuten ohne Bedienung legt sich eine Ebene über die Visualisierung, schwarz oder mit Uhr und Datum (die Uhr wandert jede Minute). Die erste Berührung weckt nur auf und löst in der Visualisierung nichts aus. Aus Symcon lässt er sich einschalten und aufwecken; angedockte Module wecken mit `ext.wake()`. Das Display abschalten oder dimmen kann er nicht, nur abdunkeln.
-- Rücksprung und Bildschirmschoner stehen im Formular in einem eigenen Aufklappbereich.
+- Rücksprung und Bildschirmschoner haben im Formular je einen eigenen Aufklappbereich.
 - Auf Wunsch je Gerät eine Variable „online“. Die Variable „Verbundene Geräte“ gibt es immer.
 
 Funktionen für Skripte: `VISUEXT_StartPairing`, `VISUEXT_GetDevices`, `VISUEXT_UpdateDevice`, `VISUEXT_RemoveDevice`, `VISUEXT_SetModuleAllowed`, `VISUEXT_SetReturnHome` (Gerät, Minuten, Startseite), `VISUEXT_SetScreensaver` (Gerät, Minuten, `black` oder `clock`), `VISUEXT_Wake` und `VISUEXT_StartScreensaver` (Gerät oder `''` für alle).

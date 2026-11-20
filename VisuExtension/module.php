@@ -171,7 +171,7 @@ class VisuExtension extends IPSModuleStrict
                 ['type' => 'Label', 'caption' => 'Connects the browser extension "Visu-Erweiterung für Symcon" with this Symcon. Each browser is paired once; other modules dock onto this instance and need no connection of their own.'],
                 ['type' => 'CheckBox', 'name' => 'DeviceVariables', 'caption' => 'Create a variable "online" for each device'],
             ],
-            'actions'  => array_merge($actions, [$this->kioskPanel()]),
+            'actions'  => array_merge($actions, $this->kioskPanels()),
             'status'   => [
                 ['code' => IS_ACTIVE, 'icon' => 'active', 'caption' => 'Active'],
                 ['code' => self::STATUS_SECOND_INSTANCE, 'icon' => 'error', 'caption' => 'There is already an instance of this module. Only one per Symcon is possible.'],
@@ -299,39 +299,64 @@ class VisuExtension extends IPSModuleStrict
         return $rows;
     }
 
-    /** Aufklappbereich: Rücksprung zur Startseite und Bildschirmschoner je Gerät. */
-    private function kioskPanel(): array
+    /** Zwei Aufklappbereiche: Rücksprung zur Startseite und Bildschirmschoner, je eine Zeile je Gerät. */
+    private function kioskPanels(): array
     {
-        $rows = [];
+        $home = [];
+        $saver = [];
         foreach ($this->deviceList() as $device) {
-            $rows[] = ['Id' => $device['id'], 'Device' => $device['name'], 'HomeMinutes' => $device['home']['minutes'], 'HomePage' => $device['home']['page'],
-                'SaverMinutes' => $device['saver']['minutes'], 'SaverMode' => $device['saver']['mode']];
+            $home[] = ['Id' => $device['id'], 'Device' => $device['name'], 'HomeMinutes' => $device['home']['minutes'], 'HomePage' => $device['home']['page']];
+            $saver[] = ['Id' => $device['id'], 'Device' => $device['name'], 'SaverMinutes' => $device['saver']['minutes'], 'SaverMode' => $device['saver']['mode']];
         }
         $minutes = ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1440, 'suffix' => ' min'];
+        $id = ['caption' => 'ID', 'name' => 'Id', 'width' => '0px', 'visible' => false];
+        $device = ['caption' => 'Device', 'name' => 'Device', 'width' => 'auto'];
         return [
-            'type'    => 'ExpansionPanel',
-            'caption' => 'Return to start page and screensaver',
-            'items'   => [
-                ['type' => 'Label', 'caption' => 'Both count the time without touch, click, key or mouse wheel on that device (0 = off) and take effect immediately.'],
-                ['type' => 'Label', 'caption' => 'Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column "Page" of the device list, e.g. /#/12345.'],
-                ['type' => 'Label', 'caption' => 'The screensaver covers the visualization; the first touch only wakes it up. From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver.'],
-                [
-                    'type'     => 'List',
-                    'name'     => 'Kiosk',
-                    'rowCount' => 6,
-                    'add'      => false,
-                    'delete'   => false,
-                    'onEdit'   => 'VISUEXT_SetReturnHome($id, $Kiosk[\'Id\'], $Kiosk[\'HomeMinutes\'], $Kiosk[\'HomePage\']); VISUEXT_SetScreensaver($id, $Kiosk[\'Id\'], $Kiosk[\'SaverMinutes\'], $Kiosk[\'SaverMode\']);',
-                    'columns'  => [
-                        ['caption' => 'Device', 'name' => 'Device', 'width' => 'auto'],
-                        ['caption' => 'Back to start page after', 'name' => 'HomeMinutes', 'width' => '200px', 'edit' => $minutes],
-                        ['caption' => 'Start page', 'name' => 'HomePage', 'width' => '200px', 'edit' => ['type' => 'ValidationTextBox']],
-                        ['caption' => 'Screensaver after', 'name' => 'SaverMinutes', 'width' => '180px', 'edit' => $minutes],
-                        ['caption' => 'Screensaver shows', 'name' => 'SaverMode', 'width' => '160px', 'edit' => ['type' => 'Select', 'options' => [
-                            ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock']]]],
-                        ['caption' => 'ID', 'name' => 'Id', 'width' => '0px', 'visible' => false],
+            [
+                'type'    => 'ExpansionPanel',
+                'caption' => 'Return to start page',
+                'items'   => [
+                    ['type' => 'Label', 'caption' => 'After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.'],
+                    ['type' => 'Label', 'caption' => 'Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column "Page" of the device list, e.g. /#/12345.'],
+                    [
+                        'type'     => 'List',
+                        'name'     => 'Home',
+                        'rowCount' => 6,
+                        'add'      => false,
+                        'delete'   => false,
+                        'onEdit'   => 'VISUEXT_SetReturnHome($id, $Home[\'Id\'], $Home[\'HomeMinutes\'], $Home[\'HomePage\']);',
+                        'columns'  => [
+                            $device,
+                            ['caption' => 'Back to start page after', 'name' => 'HomeMinutes', 'width' => '220px', 'edit' => $minutes],
+                            ['caption' => 'Start page', 'name' => 'HomePage', 'width' => '260px', 'edit' => ['type' => 'ValidationTextBox']],
+                            $id,
+                        ],
+                        'values'   => $home,
                     ],
-                    'values'   => $rows,
+                ],
+            ],
+            [
+                'type'    => 'ExpansionPanel',
+                'caption' => 'Screensaver',
+                'items'   => [
+                    ['type' => 'Label', 'caption' => 'After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.'],
+                    ['type' => 'Label', 'caption' => 'From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.'],
+                    [
+                        'type'     => 'List',
+                        'name'     => 'Saver',
+                        'rowCount' => 6,
+                        'add'      => false,
+                        'delete'   => false,
+                        'onEdit'   => 'VISUEXT_SetScreensaver($id, $Saver[\'Id\'], $Saver[\'SaverMinutes\'], $Saver[\'SaverMode\']);',
+                        'columns'  => [
+                            $device,
+                            ['caption' => 'Screensaver after', 'name' => 'SaverMinutes', 'width' => '220px', 'edit' => $minutes],
+                            ['caption' => 'Screensaver shows', 'name' => 'SaverMode', 'width' => '260px', 'edit' => ['type' => 'Select', 'options' => [
+                                ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock']]]],
+                            $id,
+                        ],
+                        'values'   => $saver,
+                    ],
                 ],
             ],
         ];

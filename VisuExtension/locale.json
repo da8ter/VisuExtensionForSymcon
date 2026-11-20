@@ -36,14 +36,16 @@
             "inactive": "inaktiv",
             "Back to start page after": "Zurück zur Startseite nach",
             "Start page": "Startseite",
-            "Return to start page and screensaver": "Zurück zur Startseite und Bildschirmschoner",
-            "Both count the time without touch, click, key or mouse wheel on that device (0 = off) and take effect immediately.": "Beide zählen die Zeit ohne Berührung, Klick, Taste oder Mausrad auf diesem Gerät (0 = aus) und wirken sofort.",
             "Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column \"Page\" of the device list, e.g. /#/12345.": "Startseite leer = die Seite, mit der die Visualisierung geladen wurde; sonst die Adresse wie in der Spalte „Seite“ der Geräteliste, z. B. /#/12345.",
-            "The screensaver covers the visualization; the first touch only wakes it up. From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver.": "Der Bildschirmschoner legt sich über die Visualisierung; die erste Berührung weckt nur auf. Aus Skripten: VISUEXT_Wake und VISUEXT_StartScreensaver.",
             "Screensaver after": "Bildschirmschoner nach",
             "Screensaver shows": "Bildschirmschoner zeigt",
             "Black": "Schwarz",
-            "Clock": "Uhr"
+            "Clock": "Uhr",
+            "Return to start page": "Zurück zur Startseite",
+            "Screensaver": "Bildschirmschoner",
+            "After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.": "Nach den eingestellten Minuten ohne Berührung, Klick, Taste oder Mausrad wechselt die Visualisierung auf diesem Gerät zurück auf ihre Startseite (0 = aus). Wirkt sofort.",
+            "After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.": "Nach den eingestellten Minuten ohne Berührung, Klick, Taste oder Mausrad legt sich auf diesem Gerät eine Ebene über die Visualisierung (0 = aus); die erste Berührung weckt nur auf. Wirkt sofort.",
+            "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.": "Aus Skripten: VISUEXT_Wake und VISUEXT_StartScreensaver, z. B. für einen Bewegungsmelder."
         },
         "en": {
             "Visu Extension": "Visu Extension",
@@ -81,14 +83,16 @@
             "inactive": "inactive",
             "Back to start page after": "Back to start page after",
             "Start page": "Start page",
-            "Return to start page and screensaver": "Return to start page and screensaver",
-            "Both count the time without touch, click, key or mouse wheel on that device (0 = off) and take effect immediately.": "Both count the time without touch, click, key or mouse wheel on that device (0 = off) and take effect immediately.",
             "Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column \"Page\" of the device list, e.g. /#/12345.": "Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column \"Page\" of the device list, e.g. /#/12345.",
-            "The screensaver covers the visualization; the first touch only wakes it up. From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver.": "The screensaver covers the visualization; the first touch only wakes it up. From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver.",
             "Screensaver after": "Screensaver after",
             "Screensaver shows": "Screensaver shows",
             "Black": "Black",
-            "Clock": "Clock"
+            "Clock": "Clock",
+            "Return to start page": "Return to start page",
+            "Screensaver": "Screensaver",
+            "After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.": "After the set minutes without touch, click, key or mouse wheel the visualization on that device returns to its start page (0 = off). Takes effect immediately.",
+            "After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.": "After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.",
+            "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.": "From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector."
         }
     }
 }
