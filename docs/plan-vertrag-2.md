@@ -1,6 +1,6 @@
 # Plan: Vertrag 2 – ein Symcon-Modul als einzige Verbindung
 
-Stand: 20.11.2026, Entscheidungen des Nutzers eingetragen (siehe unten). Noch offen: der Name und die Messung zum WebSocket.
+Stand: 20.11.2026, Entscheidungen des Nutzers eingetragen, WebSocket gemessen (beides unten). Noch offen: der Name des Moduls.
 
 ## Ziel
 
@@ -74,14 +74,42 @@ Die Prüfregeln bleiben: Verbindung und Skripte nur unter `/hook/` auf demselben
 ## Entscheidungen (Nutzer, 20.11.2026)
 
 1. **Das Symcon-Modul liegt im Repo der Erweiterung.** Eine Bibliothek: `library.json` und Modulordner neben `src/`; Versionen gehen gemeinsam.
-2. **Rückkanal über WebSocket über Symcon**, nicht über Abfragen. Vorher messen: Welcher Weg trägt (eigene WebSocket-Server-Instanz in Symcon mit eigenem Port, oder der WebSocket der Visualisierung), wie verhalten sich HTTPS/Connect und gemischte Inhalte, und baut die Verbindung nach Abriss sauber wieder auf. Bis zur Messung ist das der größte offene Punkt.
+2. **Rückkanal über WebSocket über Symcon**, nicht über Abfragen. Gemessen am 20.11.2026: Der WebSocket am eigenen Hook trägt (siehe „Messung WebSocket“). Eine eigene WebSocket-Server-Instanz mit eigenem Port und der WebSocket der Visualisierung sind damit vom Tisch.
 3. **Die Kiosk-Funktionen sind in die Visu-Erweiterung eingebaut**, Einstellungen je Gerät in der Geräteliste.
 4. **Die gemeinsame Schnittstelle (`window.visuExt`) liefert das Symcon-Modul** als erstes Skript aus. Die Browser-Erweiterung bleibt reiner Lader.
 5. Noch offen: der Name des Moduls (Arbeitstitel „Visu-Erweiterung“).
 
+## Messung WebSocket (20.11.2026)
+
+Gemessen an Symcon 9.1 (Build vom 21.10.2026) im Docker, mit einem Probe-Modul (Hook mit Echo), Node-Clients und einem echten Headless-Chrome. Die SymBox läuft auf demselben Build und wurde deshalb nicht eigens gemessen.
+
+| Frage | Ergebnis |
+|---|---|
+| Nimmt der Hook des Moduls WebSockets an? | Ja, direkt und über Symcon Connect (HTTP 101). |
+| Aus dem Browser, auf der Visu-Seite selbst? | Ja. `ws://` bei HTTP, `wss://` über Connect, jeweils zum eigenen Ursprung; kein gemischter Inhalt. Die Visu setzt keine Content-Security-Policy. |
+| Laufzeiten | Direkt: offen nach 5–50 ms, Echo rund 3 ms. Über Connect: offen nach 0,2–0,5 s, Echo rund 75 ms. 100 kB je Frame in beiden Richtungen vollständig. |
+| Gezielt an ein Gerät senden (`WC_PushMessageEx`) | Geht, auch über Connect und auch aus einem Skript heraus (nicht nur als Antwort). Über Connect haben alle Verbindungen die Adresse 127.0.0.1 und unterscheiden sich nur im Port; zwei gleichzeitige Verbindungen bekamen nur ihre eigenen Nachrichten. |
+| Was sieht das Modul je Frame? | Adresse und Port der Verbindung, `Sec-WebSocket-Key`, die Abfrage der Adresse, aus dem Browser auch `Origin`. Über Connect steht die echte Adresse nur in `X-Forwarded-For`. |
+| Stille Verbindung | Direkt: 290 s Stille überstanden. **Über Connect wird nach 120 s ohne Daten getrennt** (Close 1006 beim Client). Mit einem Frame alle 50 s hielt sie über 350 s. |
+| Komprimierung | Der Browser bietet `permessage-deflate` an, Symcon nimmt es nicht an. |
+
+Schon vorher bekannt (Messung 26.10.2026 für die Display-Kachel, gleicher Build-Stand): Symcon nimmt die Verbindung an, bevor Modulcode läuft. Ping, Pong und Close erreichen das Modul nicht, es gibt kein Trenn-Ereignis. Frames verschiedener Verbindungen laufen im Modul gleichzeitig. `WC_PushMessageEx` meldet auch an eine tote Verbindung „gesendet“. Ein Kernel-Neustart trennt, ohne dass der Client sofort ein Close sieht; ein Modul-Reload trennt nicht, leert aber die Puffer.
+
+### Folgen für den Bau
+
+- **Ein Kanal:** `ws(s)://<Ursprung der Visu>/hook/visuext/<ID>`. Die Adresse leitet das Skript aus `location.origin` ab; so passt sie für LAN, HTTPS und Connect von selbst.
+- **Anmeldung im ersten Frame** (Gerätekennung und Geräteschlüssel), nicht in der Adresse: Symcon schreibt Adressen ins Zugriffsprotokoll. Unangemeldete Verbindungen bekommen nichts. Nie `WC_PushMessage` (an alle) mit Inhalt.
+- **Lebenszeichen vom Gerät alle 30 s**, vom Modul beantwortet. Damit bleibt die Verbindung über Connect offen, das Gerät erkennt einen Kernel-Neustart (keine Antwort → neu verbinden), und das Modul erkennt ein verschwundenes Gerät (kein Lebenszeichen seit 90 s → offline).
+- **Neu verbinden** mit wachsendem Abstand; auf „unbekannte Sitzung“ (nach Modul-Reload) meldet sich das Gerät neu an.
+- **Sitzungstabelle im Modul** (Gerät → Adresse, Port, Schlüssel der Verbindung, zuletzt gesehen) hinter einer Sperre, weil Frames gleichzeitig laufen.
+- **`Origin` prüfen:** Der Browser schickt den Ursprung der Visu mit; das Modul nimmt Anmeldungen nur an, wenn Ursprung und angesprochener Host zusammenpassen.
+- **Beschreibung und Skripte bleiben HTTP** (wie bisher), der WebSocket trägt nur Befehle, Ereignisse und Lebenszeichen.
+
+Nicht gemessen: Dauerbetrieb über Stunden, mehrere Dutzend Geräte gleichzeitig, das Verhalten im Browser bei einem Kernel-Neustart (nur aus der Messung mit Node bekannt) und etwaige Mengengrenzen von Connect für dauerhaft offene Verbindungen.
+
 ## Reihenfolge
 
-1. WebSocket messen (Docker und SymBox, mit und ohne Connect) und den Weg festlegen.
+1. ~~WebSocket messen und den Weg festlegen.~~ Erledigt am 20.11.2026.
 2. Symcon-Modul: Hook, Kopplung, Geräteliste, Datenfluss zum Andocken, Auslieferung.
 3. Erweiterung auf Vertrag 2 umbauen, Vertrag 1 entfernen, Tests anpassen (`extension_test.mjs` mit echter Erweiterung).
 4. Benachrichtigungs-Kachel andocken.
