@@ -64,7 +64,7 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 
 ## Für Modulhersteller
 
-Ein Modul dockt in Symcon über den Datenfluss an die Visu-Erweiterung an: Es liefert ihr sein Skript und tauscht über ihren Kanal Nachrichten mit den verbundenen Browsern. Einen eigenen Hook oder Schlüssel braucht es nicht. Die Anleitung steht in [docs/entwickler.md](docs/entwickler.md), eine Vorlage in [examples/](examples/), das Protokoll zwischen Erweiterung und Modul in [docs/vertrag-2.md](docs/vertrag-2.md).
+Ein Modul dockt in Symcon über den Datenfluss an die Visu-Erweiterung an: Es liefert ihr sein Skript und tauscht über ihren Kanal Nachrichten mit den verbundenen Browsern. Einen eigenen Hook oder Schlüssel braucht es dafür nicht. Ein Beispiel aus dem Betrieb ist die [Benachrichtigungs-Kachel](https://github.com/da8ter/TileVisu-Benachrichtigungen): Angedockt zeigt sie ihre Overlays auf jeder Seite. Die Anleitung steht in [docs/entwickler.md](docs/entwickler.md), eine Vorlage in [examples/](examples/), das Protokoll zwischen Erweiterung und Modul in [docs/vertrag-2.md](docs/vertrag-2.md).
 
 ## Prüfen
 
