@@ -32,28 +32,17 @@ trait VisuExtChannel
                 $this->hello($addr, $port, $wsKey, $msg);
                 return;
             case 'beat':
-                $known = $this->locked(function () use ($addr, $port, $wsKey, $msg): bool {
-                    $sessions = $this->sessions();
-                    $sid = $addr . '|' . $port;
-                    if (!isset($sessions[$sid]) || $sessions[$sid]['k'] !== $wsKey) {
-                        return false;
-                    }
-                    $sessions[$sid]['t'] = $this->now();
-                    $sessions[$sid]['page'] = VisuExtCore::cleanPage($msg['page'] ?? '');
-                    $this->saveSessions($sessions);
-                    return true;
-                });
-                $this->push($addr, $port, ['t' => $known ? 'beat' : 'unknown']);
+                [$state] = $this->checkSession($addr, $port, $wsKey, VisuExtCore::cleanPage($msg['page'] ?? ''));
+                $this->push($addr, $port, ['t' => $state === 'ok' ? 'beat' : $state]);
                 return;
             case 'ev':
-                $session = $this->sessions()[$addr . '|' . $port] ?? null;
-                if (!is_array($session) || $session['k'] !== $wsKey) {
-                    $this->push($addr, $port, ['t' => 'unknown']);
+                [$state, $session, $device] = $this->checkSession($addr, $port, $wsKey, null);
+                if ($state !== 'ok') {
+                    $this->push($addr, $port, ['t' => $state]);
                     return;
                 }
-                $device = $this->devices()[$session['d']] ?? null;
                 $module = is_int($msg['m'] ?? null) ? $msg['m'] : 0;
-                if (!is_array($device) || $module <= 0 || !$this->moduleAllowed($device, $module)) {
+                if ($module <= 0 || !$this->moduleAllowed($device, $module)) {
                     return;
                 }
                 // Außerhalb der Sperre: das Modul darf während der Antwort selbst an Geräte senden
@@ -65,21 +54,61 @@ trait VisuExtChannel
         }
     }
 
+    /**
+     * Sitzung einer Verbindung samt Gerät, in einem Zug unter der Sperre geprüft. Ein gesperrtes oder
+     * entferntes Gerät verliert die Sitzung spätestens hier, auch wenn sich sein Abweisen und eine
+     * Anmeldung gekreuzt haben. Mit $page zählt der Frame als Lebenszeichen.
+     * @return array{0:string,1:?array,2:?array} 'ok' | 'unknown' | 'denied', dazu Sitzung und Gerät
+     */
+    private function checkSession(string $addr, int $port, string $wsKey, ?string $page): array
+    {
+        $result = $this->locked(function () use ($addr, $port, $wsKey, $page): array {
+            $sessions = $this->sessions();
+            $sid = $addr . '|' . $port;
+            $session = $sessions[$sid] ?? null;
+            if (!is_array($session) || $session['k'] !== $wsKey) {
+                return ['unknown', null, null];
+            }
+            $device = $this->devices()[$session['d']] ?? null;
+            if (!is_array($device) || !empty($device['blocked'])) {
+                unset($sessions[$sid]);
+                $this->saveSessions($sessions);
+                return ['denied', null, null];
+            }
+            if ($page !== null) {
+                $sessions[$sid]['t'] = $this->now();
+                $sessions[$sid]['page'] = $page;
+                $this->saveSessions($sessions);
+            }
+            return ['ok', $session, $device];
+        }) ?? ['unknown', null, null];
+        if ($result[0] === 'denied') {
+            $this->refreshPresence();
+        }
+        return $result;
+    }
+
     private function hello(string $addr, int $port, string $wsKey, array $msg): void
     {
         $id = is_string($msg['d'] ?? null) ? $msg['d'] : '';
         $token = is_string($msg['c'] ?? null) ? $msg['c'] : '';
-        $device = $this->devices()[$id] ?? null;
-        if (!is_array($device) || !empty($device['blocked']) || !hash_equals(VisuExtCore::channelToken($id, (string) $device['secret']), $token)) {
-            $this->push($addr, $port, ['t' => 'denied']);
-            return;
-        }
-        $this->locked(function () use ($addr, $port, $wsKey, $id, $msg): void {
+        // Prüfen und Eintragen unter derselben Sperre: sonst könnte ein Gerät, das gerade gesperrt wird,
+        // nach dem Abweisen seiner Verbindungen noch eine neue Sitzung bekommen.
+        $device = $this->locked(function () use ($addr, $port, $wsKey, $id, $token, $msg): ?array {
+            $device = $this->devices()[$id] ?? null;
+            if (!is_array($device) || !empty($device['blocked']) || !hash_equals(VisuExtCore::channelToken($id, (string) $device['secret']), $token)) {
+                return null;
+            }
             $sessions = $this->sessions();
             $sessions[$addr . '|' . $port] = ['d' => $id, 'a' => $addr, 'p' => $port, 'k' => $wsKey, 't' => $this->now(),
                 'page' => VisuExtCore::cleanPage($msg['page'] ?? '')];
             $this->saveSessions($sessions);
+            return $device;
         });
+        if (!is_array($device)) {
+            $this->push($addr, $port, ['t' => 'denied']);
+            return;
+        }
         $this->SetTimerInterval('Sweep', VisuExtCore::BEAT_SECONDS * 1000);
         $this->push($addr, $port, ['t' => 'welcome', 'name' => (string) $device['name'], 'beat' => VisuExtCore::BEAT_SECONDS]);
         $this->refreshPresence();

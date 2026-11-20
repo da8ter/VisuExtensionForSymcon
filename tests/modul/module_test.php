@@ -252,6 +252,18 @@ check($x->UpdateDevice($id, 'Küche neu', true) && $x->devs()[$id]['name'] === '
     && $x->values['Connected'] === 0, 'Sperren: Verbindung abgewiesen');
 check($x->http(['k' => 'ext', 'd' => $id], null, ['HTTP_X_VISU_KEY' => $key])[0] === 403 && $x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5003) === [['t' => 'denied']],
     'Gesperrtes Gerät: keine Beschreibung, keine Anmeldung');
+// Eine Sitzung, die das Sperren überlebt hat (Anmeldung und Sperre haben sich gekreuzt), fällt beim nächsten Frame
+$alt = ['d' => $id, 'a' => '127.0.0.1', 'p' => 5004, 'k' => 'k1', 't' => $x->clock, 'page' => ''];
+$x->buffers['Sessions'] = (string) json_encode(['127.0.0.1|5004' => $alt]);
+$ereignisse = count($a->events);
+check($x->ws(['t' => 'ev', 'm' => 30001, 'data' => 1], 5004) === [['t' => 'denied']] && count($a->events) === $ereignisse && $x->sess() === [],
+    'Gesperrtes Gerät mit alter Sitzung: Ereignis abgewiesen, Sitzung weg');
+$x->buffers['Sessions'] = (string) json_encode(['127.0.0.1|5004' => $alt]);
+check($x->ws(['t' => 'beat'], 5004) === [['t' => 'denied']] && $x->sess() === [] && $x->values['Connected'] === 0, 'und ein Lebenszeichen hält sie nicht am Leben');
+$von = count($pushes);
+$x->buffers['Sessions'] = (string) json_encode(['127.0.0.1|5004' => $alt]);
+check($a->toParent(['Action' => 'Send', 'Device' => '', 'Data' => 1])['sent'] === 0 && count($pushes) === $von, 'An ein gesperrtes Gerät sendet kein Modul');
+$x->buffers['Sessions'] = '[]';
 $x->RequestAction('Sweep', 0);
 check($x->timers['Sweep'] === 0, 'Niemand mehr verbunden: Aufräum-Timer aus');
 check($x->UpdateDevice($id, '', false) && $x->devs()[$id]['name'] === 'Küche neu' && !$x->UpdateDevice('nixnixni', 'x', false), 'Freigeben; leerer Name lässt den alten, unbekanntes Gerät false');
