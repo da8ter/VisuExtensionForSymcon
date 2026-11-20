@@ -1,16 +1,17 @@
-/* Vorlage: Start-Skript eines Moduls für die „Visu-Erweiterung für Symcon“.
+/* Vorlage: Start-Skript eines angedockten Moduls für die „Visu-Erweiterung für Symcon“ (Vertrag 2).
  *
  * Die Erweiterung hängt dieses Skript einmal je Laden der Visualisierung als <script src> ins
- * oberste Fenster. Der Hook des Moduls setzt vorher die Konfiguration ein (siehe
- * VisuExtensionExample.php). Drei Regeln:
+ * oberste Fenster. Das Modul setzt vorher die Konfiguration ein (siehe VisuExtensionExample.php).
+ * Regeln:
  *   1. Doppeltes Laden vertragen (Merker am Fenster).
  *   2. Nichts über den Aufbau der Visualisierung voraussetzen: Sie ist keine zugesicherte
  *      Schnittstelle von Symcon. Eigene Elemente an document.body hängen, fremde nicht anfassen.
  *   3. Eigene Namen eindeutig halten (Globale, CSS-Klassen, localStorage-Schlüssel).
+ *   4. Die Laufzeit (window.visuExt) über die Warteliste holen: die Reihenfolge der Skripte ist offen.
  */
 (function () {
   'use strict';
-  var C = /*CONFIG*/null; // vom Hook eingesetzt: {instance, hook, name}
+  var C = /*CONFIG*/null; // vom Modul eingesetzt: {instance, name}
   var w = window, d = document;
   if (!C || w.top !== w) return;
 
@@ -28,7 +29,16 @@
     d.body.appendChild(el);
     w.setTimeout(function () { el.remove(); }, 4000);
   }
-  hinweis(C.name + ': verbunden');
+
+  // 4. Kanal zum eigenen Modul: Nachrichten empfangen (Aktion „Send“ im Modul) und senden (Aktion „Event“).
+  (w.visuExtReady = w.visuExtReady || []).push(function (ext) {
+    ext.on(C.instance, function (daten) {
+      if (daten && typeof daten.text === 'string') hinweis(daten.text);
+    });
+    ext.onState(function (verbunden) {
+      if (verbunden) ext.send(C.instance, { hallo: ext.device.name });
+    });
+  });
 
   /* Optional: Font-Awesome-Icons aus Symcons /icons.js über den geteilten Platz window.__symconIcons
    * ({v, fa, css, fehler}). Wer ihn zuerst braucht, legt ihn an; alle anderen benutzen ihn mit. So

@@ -1,6 +1,6 @@
 # Plan: Vertrag 2 – ein Symcon-Modul als einzige Verbindung
 
-Stand: 20.11.2026, Entscheidungen des Nutzers eingetragen, WebSocket gemessen (beides unten). Noch offen: der Name des Moduls.
+Stand: 20.11.2026. Schritt 1 (Messung) und Schritt 2 (Symcon-Modul) sind erledigt; was das Modul tut, steht in [vertrag-2.md](vertrag-2.md). Offen: Erweiterung umstellen, Benachrichtigungs-Kachel andocken, Rücksprung und Wächter. Der Name bleibt beim Arbeitstitel „Visu-Erweiterung“.
 
 ## Ziel
 
@@ -102,7 +102,7 @@ Schon vorher bekannt (Messung 26.10.2026 für die Display-Kachel, gleicher Build
 - **Lebenszeichen vom Gerät alle 30 s**, vom Modul beantwortet. Damit bleibt die Verbindung über Connect offen, das Gerät erkennt einen Kernel-Neustart (keine Antwort → neu verbinden), und das Modul erkennt ein verschwundenes Gerät (kein Lebenszeichen seit 90 s → offline).
 - **Neu verbinden** mit wachsendem Abstand; auf „unbekannte Sitzung“ (nach Modul-Reload) meldet sich das Gerät neu an.
 - **Sitzungstabelle im Modul** (Gerät → Adresse, Port, Schlüssel der Verbindung, zuletzt gesehen) hinter einer Sperre, weil Frames gleichzeitig laufen.
-- **`Origin` prüfen:** Der Browser schickt den Ursprung der Visu mit; das Modul nimmt Anmeldungen nur an, wenn Ursprung und angesprochener Host zusammenpassen.
+- **`Origin` wird nicht geprüft** (beim Bau entschieden): Die Anmeldung trägt einen eigenen Wert und kein Cookie, eine fremde Seite kann sie also nicht mitbenutzen. Eine Prüfung gegen den Host träfe dagegen Aufbauten mit einem Proxy, der den Host umschreibt.
 - **Beschreibung und Skripte bleiben HTTP** (wie bisher), der WebSocket trägt nur Befehle, Ereignisse und Lebenszeichen.
 
 Nicht gemessen: Dauerbetrieb über Stunden, mehrere Dutzend Geräte gleichzeitig, das Verhalten im Browser bei einem Kernel-Neustart (nur aus der Messung mit Node bekannt) und etwaige Mengengrenzen von Connect für dauerhaft offene Verbindungen.
@@ -110,7 +110,7 @@ Nicht gemessen: Dauerbetrieb über Stunden, mehrere Dutzend Geräte gleichzeitig
 ## Reihenfolge
 
 1. ~~WebSocket messen und den Weg festlegen.~~ Erledigt am 20.11.2026.
-2. Symcon-Modul: Hook, Kopplung, Geräteliste, Datenfluss zum Andocken, Auslieferung.
+2. ~~Symcon-Modul: Hook, Kopplung, Geräteliste, Datenfluss zum Andocken, Auslieferung.~~ Erledigt am 20.11.2026 (`VisuExtension/`, `libs/`, Tests in `tests/modul/` und `tests/runtime_test.mjs`). Abweichungen vom Entwurf oben: fester Hook `/hook/visuext` und eine Instanz je Symcon (das Koppeln braucht so keine Instanz-ID); die Beschreibung nennt keinen Kanal, die Laufzeit kennt ihn; Skript-Adressen tragen ein Ticket statt des Schlüssels; Freigaben als Sperrliste je Gerät.
 3. Erweiterung auf Vertrag 2 umbauen, Vertrag 1 entfernen, Tests anpassen (`extension_test.mjs` mit echter Erweiterung).
-4. Benachrichtigungs-Kachel andocken.
+4. Benachrichtigungs-Kachel andocken (ebenso die Klebezettel, die Vertrag 1 auch sprechen).
 5. Visu-Steuerung: Rücksprung und Wächter.

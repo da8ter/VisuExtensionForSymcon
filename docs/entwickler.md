@@ -1,5 +1,7 @@
 # Ein Modul anbinden (Vertrag 1)
 
+> **Wird abgelöst.** Diese Seite beschreibt Vertrag 1, den die Erweiterung 0.1.1 spricht. Der Nachfolger steht in [vertrag-2.md](vertrag-2.md): ein Symcon-Modul als einzige Verbindung, andere Module docken daran an. Die Vorlage in [`examples/`](../examples/) zeigt schon Vertrag 2.
+
 Die Visu-Erweiterung lädt Skripte deines Moduls ins oberste Fenster der Kachel-Visualisierung. Dein Modul braucht dafür nur einen Hook, der zwei Dinge ausliefert: eine Beschreibung und das Skript. Eine vollständige Vorlage liegt in [`examples/`](../examples/).
 
 ## Ablauf

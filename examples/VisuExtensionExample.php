@@ -3,102 +3,100 @@
 declare(strict_types=1);
 
 /**
- * Beispiel: ein Modul an die „Visu-Erweiterung für Symcon“ anbinden (Vertrag 1).
+ * Beispiel: ein Modul an die „Visu-Erweiterung“ andocken (Vertrag 2).
  *
- * Das Modul bietet über seinen Hook zwei Dinge an:
- *   /hook/visu-ext-example/<ID>?t=<Schlüssel>&k=ext        die Beschreibung (JSON): das ist die Verbindungsadresse
- *   /hook/visu-ext-example/<ID>?t=<Schlüssel>&k=start.js   das Skript, das im Fenster der Visualisierung läuft
+ * Das Modul hängt im Datenfluss als Kind an der Instanz „Visu-Erweiterung“. Es braucht keinen
+ * eigenen Hook und keinen eigenen Schlüssel: Sein Skript liefert die Visu-Erweiterung aus, und
+ * Nachrichten laufen über deren Kanal zu den gekoppelten Browsern.
  *
- * Benötigt Symcon 8.1 (RegisterHook in IPSModuleStrict). Die Datei ist eine Vorlage zum Übernehmen,
- * kein installierbares Modul: module.json, locale.json und start-script.js gehören dazu.
+ * In die module.json des Moduls gehören die beiden Pakete des Datenflusses:
+ *   "parentRequirements": ["{A5B87602-1C34-4981-89A5-62A0735CB359}"],
+ *   "implemented":        ["{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}"]
+ *
+ * Benötigt Symcon 8.2 (GetCompatibleParents). Die Datei ist eine Vorlage zum Übernehmen, kein
+ * installierbares Modul: module.json, locale.json und start-script.js gehören dazu.
  */
 class VisuExtensionExample extends IPSModuleStrict
 {
-    private const HOOK = 'visu-ext-example';
+    /** Dieses Modul → Visu-Erweiterung */
+    private const DOCK_TX = '{A5B87602-1C34-4981-89A5-62A0735CB359}';
+    /** Visu-Erweiterung → dieses Modul */
+    private const DOCK_RX = '{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}';
+    private const VISU_EXTENSION = '{CB9C6C38-9B97-45CA-BFB5-EC7F936AF3FF}';
 
     public function Create(): void
     {
         parent::Create();
-        $this->RegisterAttributeString('HookToken', '');
-        // Der Hook ist flüchtig: Symcon entfernt ihn beim Neustart und mit der Instanz.
-        $this->SetBuffer('Hook', $this->RegisterHook(self::HOOK . '/' . $this->InstanceID) ? '1' : '');
     }
 
     public function ApplyChanges(): void
     {
         parent::ApplyChanges();
-        if (IPS_GetKernelRunlevel() !== KR_READY) {
-            $this->RegisterMessage(0, IPS_KERNELSTARTED);
-            return;
-        }
-        // Eigener Schlüssel je Instanz: ohne ihn antwortet der Hook mit 403.
-        if ($this->ReadAttributeString('HookToken') === '') {
-            $this->WriteAttributeString('HookToken', bin2hex(random_bytes(16)));
-        }
+        // Nur Pakete an alle (Target 0) oder an diese Instanz. ReceiveData prüft das Ziel trotzdem selbst.
+        $this->SetReceiveDataFilter('.*"Target":(0|' . $this->InstanceID . ')[,}].*');
     }
 
-    public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
+    public function Destroy(): void
     {
-        if ($Message === IPS_KERNELSTARTED) {
-            $this->ApplyChanges();
-        }
+        parent::Destroy();
     }
 
-    /** Das Formular nennt die Verbindungsadresse (ohne Server: den kennt nur der Browser des Nutzers). */
-    public function GetConfigurationForm(): string
+    /** An eine vorhandene Visu-Erweiterung anschließen; das Modul arbeitet auch ohne sie. */
+    public function GetCompatibleParents(): string
     {
-        $form = ['elements' => [], 'actions' => []];
-        $base = $this->HookBase();
-        if ($base !== '') {
-            // Beschriftungen übersetzt Symcon über die locale.json.
-            $form['actions'][] = ['type' => 'Label', 'caption' => 'Enter this address in the browser extension, with the address of your visualization in front.'];
-            $form['actions'][] = ['type' => 'ValidationTextBox', 'name' => 'ExtensionAddress', 'caption' => 'Address for the browser extension', 'width' => '700px', 'value' => $base . '&k=ext'];
-        }
-        return (string) json_encode($form);
+        return (string) json_encode(['type' => 'connect', 'moduleIDs' => [self::VISU_EXTENSION]]);
     }
 
-    protected function ProcessHookData(): void
+    /** Anfragen der Visu-Erweiterung. Die Rückgabe ist die Antwort. */
+    public function ReceiveData(string $JSONString): string
     {
-        $token = $this->ReadAttributeString('HookToken');
-        $given = isset($_GET['t']) && is_string($_GET['t']) ? $_GET['t'] : '';
-        if ($token === '' || !hash_equals($token, $given)) {
-            http_response_code(403);
-            return;
+        $data = json_decode($JSONString, true);
+        if (!is_array($data) || ($data['DataID'] ?? '') !== self::DOCK_RX || !in_array($data['Target'] ?? null, [0, $this->InstanceID], true)) {
+            return '';
         }
-        header('X-Content-Type-Options: nosniff');
-        $k = isset($_GET['k']) && is_string($_GET['k']) ? $_GET['k'] : '';
-        switch ($k) {
-            case 'ext':
-                // Die Beschreibung. Skripte müssen auf diesem Server unter /hook/ liegen.
-                header('Content-Type: application/json; charset=utf-8');
-                header('Cache-Control: no-store');
-                echo json_encode([
-                    'visuExtension' => 1,
-                    'name'          => IPS_GetName($this->InstanceID),
-                    'version'       => '1.0',
-                    'scripts'       => [$this->HookBase() . '&k=start.js'],
-                    'info'          => '',
-                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                return;
-            case 'start.js':
-                // Das Skript mit eingesetzter Konfiguration. Nichts hineinlegen, was nicht jeder
-                // Betrachter der Visualisierung sehen darf.
-                header('Content-Type: application/javascript; charset=utf-8');
-                header('Cache-Control: no-cache');
-                $config = ['instance' => $this->InstanceID, 'hook' => $this->HookBase(), 'name' => IPS_GetName($this->InstanceID)];
-                echo str_replace(
+        switch ((string) ($data['Action'] ?? '')) {
+            case 'Describe':
+                // „active“ false blendet das Skript aus; „info“ nennt dem Nutzer den Grund.
+                return (string) json_encode([
+                    'instance' => $this->InstanceID,
+                    'name'     => IPS_GetName($this->InstanceID),
+                    'version'  => '1.0',
+                    'active'   => true,
+                    'info'     => '',
+                ], JSON_UNESCAPED_UNICODE);
+
+            case 'Script':
+                // Das Skript mit eingesetzter Konfiguration. $data['Device'] = {id, name} des Browsers.
+                // Nichts hineinlegen, was nicht jeder Betrachter der Visualisierung sehen darf.
+                $config = ['instance' => $this->InstanceID, 'name' => IPS_GetName($this->InstanceID)];
+                return str_replace(
                     '/*CONFIG*/null',
-                    (string) json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                    (string) json_encode($config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG),
                     (string) file_get_contents(__DIR__ . '/start-script.js')
                 );
-                return;
+
+            case 'Event':
+                // Das Skript hat ext.send(INSTANZ, daten) gerufen. Eine Rückgabe (JSON) geht an genau dieses Gerät zurück.
+                $this->SendDebug('Event', (string) json_encode([$data['Device'] ?? null, $data['Data'] ?? null]), 0);
+                return (string) json_encode(['text' => 'Angekommen']);
         }
-        http_response_code(404);
+        return '';
     }
 
-    private function HookBase(): string
+    /** Zeigt einen Hinweis auf allen gekoppelten Browsern ('' = alle) bzw. auf einem Gerät. */
+    public function ShowHint(string $Text, string $DeviceID): int
     {
-        $token = $this->ReadAttributeString('HookToken');
-        return $this->GetBuffer('Hook') === '' || $token === '' ? '' : '/hook/' . self::HOOK . '/' . $this->InstanceID . '?t=' . $token;
+        if (!$this->HasActiveParent()) {
+            return 0;
+        }
+        $answer = json_decode($this->SendDataToParent((string) json_encode([
+            'DataID'   => self::DOCK_TX,
+            'Action'   => 'Send',
+            'Instance' => $this->InstanceID,
+            'Device'   => $DeviceID,
+            'Data'     => ['text' => $Text],
+        ], JSON_UNESCAPED_UNICODE)), true);
+        // Zahl der Verbindungen, an die gesendet wurde; eine Zustellung bestätigt das nicht.
+        return is_array($answer) && !empty($answer['ok']) ? (int) $answer['sent'] : 0;
     }
 }
