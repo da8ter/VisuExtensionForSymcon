@@ -64,6 +64,28 @@ trait VisuExtDevices
         return (bool) $found;
     }
 
+    /**
+     * Rücksprung zur Startseite: Nach $Minutes ohne Bedienung (0 = aus) wechselt die Visualisierung auf
+     * diesem Gerät zurück auf $Page ('' = die Seite, mit der sie geladen wurde). Wirkt sofort, auch auf
+     * einer schon geöffneten Visualisierung.
+     */
+    public function SetReturnHome(string $DeviceID, int $Minutes, string $Page): bool
+    {
+        $found = $this->locked(function () use ($DeviceID, $Minutes, $Page): bool {
+            $devices = $this->devices();
+            if (!isset($devices[$DeviceID])) {
+                return false;
+            }
+            $devices[$DeviceID]['home'] = VisuExtCore::cleanHome($Minutes, $Page);
+            $this->saveDevices($devices);
+            return true;
+        });
+        if ($found) {
+            $this->sendConfig($DeviceID);
+        }
+        return (bool) $found;
+    }
+
     /** Legt fest, ob ein angedocktes Modul auf einem Gerät läuft (Vorgabe: jedes Modul auf jedem Gerät). */
     public function SetModuleAllowed(string $DeviceID, int $ModuleInstanceID, bool $Allowed): bool
     {
@@ -82,7 +104,7 @@ trait VisuExtDevices
         });
     }
 
-    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page. Ohne Schlüssel. */
+    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}. Ohne Schlüssel. */
     public function GetDevices(): string
     {
         return (string) json_encode($this->deviceList(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -166,7 +188,7 @@ trait VisuExtDevices
             substr($code, 0, 3) . ' ' . substr($code, 3), date('H:i', (int) $pairing['until']));
     }
 
-    /** @return list<array{id:string,name:string,online:bool,blocked:bool,seen:int,page:string}> */
+    /** @return list<array{id:string,name:string,online:bool,blocked:bool,seen:int,page:string,home:array{minutes:int,page:string}}> */
     private function deviceList(): array
     {
         $online = $this->onlineDevices();
@@ -180,6 +202,7 @@ trait VisuExtDevices
                 'blocked' => !empty($device['blocked']),
                 'seen'    => isset($online[$id]) ? $online[$id]['t'] : (int) ($device['seen'] ?? 0),
                 'page'    => isset($online[$id]) ? $online[$id]['page'] : '',
+                'home'    => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
             ];
         }
         return $list;

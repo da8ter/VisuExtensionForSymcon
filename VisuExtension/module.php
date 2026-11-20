@@ -112,7 +112,7 @@ class VisuExtension extends IPSModuleStrict
                 'rowCount' => 6,
                 'add'      => false,
                 'delete'   => true,
-                'onEdit'   => 'VISUEXT_UpdateDevice($id, $Devices[\'Id\'], $Devices[\'Name\'], $Devices[\'Blocked\']);',
+                'onEdit'   => 'VISUEXT_UpdateDevice($id, $Devices[\'Id\'], $Devices[\'Name\'], $Devices[\'Blocked\']); VISUEXT_SetReturnHome($id, $Devices[\'Id\'], $Devices[\'HomeMinutes\'], $Devices[\'HomePage\']);',
                 'onDelete' => 'VISUEXT_RemoveDevice($id, $Devices[\'Id\']);',
                 'columns'  => [
                     ['caption' => 'Name', 'name' => 'Name', 'width' => 'auto', 'edit' => ['type' => 'ValidationTextBox']],
@@ -120,6 +120,8 @@ class VisuExtension extends IPSModuleStrict
                     ['caption' => 'State', 'name' => 'State', 'width' => '110px'],
                     ['caption' => 'Last seen', 'name' => 'Seen', 'width' => '160px'],
                     ['caption' => 'Page', 'name' => 'Page', 'width' => '220px'],
+                    ['caption' => 'Back to start page after', 'name' => 'HomeMinutes', 'width' => '200px', 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1440, 'suffix' => ' min']],
+                    ['caption' => 'Start page', 'name' => 'HomePage', 'width' => '200px', 'edit' => ['type' => 'ValidationTextBox']],
                     ['caption' => 'Blocked', 'name' => 'Blocked', 'width' => '90px', 'edit' => ['type' => 'CheckBox']],
                 ],
                 'values'   => $this->deviceRows(),
@@ -171,7 +173,9 @@ class VisuExtension extends IPSModuleStrict
                 ['type' => 'Label', 'caption' => 'Connects the browser extension "Visu-Erweiterung für Symcon" with this Symcon. Each browser is paired once; other modules dock onto this instance and need no connection of their own.'],
                 ['type' => 'CheckBox', 'name' => 'DeviceVariables', 'caption' => 'Create a variable "online" for each device'],
             ],
-            'actions'  => $actions,
+            'actions'  => array_merge($actions, [
+                ['type' => 'Label', 'caption' => 'Back to start page: after the set minutes without touch or key the visualization on that device returns to its start page (0 = off). Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column "Page", e.g. /#/12345.'],
+            ]),
             'status'   => [
                 ['code' => IS_ACTIVE, 'icon' => 'active', 'caption' => 'Active'],
                 ['code' => self::STATUS_SECOND_INSTANCE, 'icon' => 'error', 'caption' => 'There is already an instance of this module. Only one per Symcon is possible.'],
@@ -276,7 +280,7 @@ class VisuExtension extends IPSModuleStrict
             'hook'    => '/hook/' . self::HOOK,
             'channel' => VisuExtCore::channelToken($id, (string) $device['secret']),
             'beat'    => VisuExtCore::BEAT_SECONDS,
-        ];
+        ] + $this->deviceConfig($device);
         return str_replace('/*VISUEXT*/null',
             (string) json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_INVALID_UTF8_SUBSTITUTE),
             (string) @file_get_contents(__DIR__ . '/../libs/runtime.js'));
@@ -293,6 +297,8 @@ class VisuExtension extends IPSModuleStrict
                 'State'   => $this->Translate($device['blocked'] ? 'blocked' : ($device['online'] ? 'online' : 'offline')),
                 'Seen'    => $device['seen'] > 0 ? date('d.m.Y H:i', $device['seen']) : '–',
                 'Page'    => $device['page'],
+                'HomeMinutes' => $device['home']['minutes'],
+                'HomePage'    => $device['home']['page'],
                 'Blocked' => $device['blocked'],
             ];
         }

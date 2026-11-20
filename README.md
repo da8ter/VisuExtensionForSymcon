@@ -44,6 +44,7 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 ## Im Formular der Instanz
 
 - **Geräte:** jeder verbundene Browser mit Name, Zustand, zuletzt gesehen und aktueller Seite. Umbenennen, sperren, entfernen.
+- **Zurück zur Startseite:** je Gerät einstellbar. Nach den eingestellten Minuten ohne Bedienung wechselt die Visualisierung dort zurück auf ihre Startseite, zum Beispiel an einem Wandtablett.
 - **Angedockte Module** und, sobald es mehrere gibt, welches Modul auf welchem Gerät läuft (Vorgabe: jedes auf jedem).
 - Die Variable „Verbundene Geräte“ gibt es immer, auf Wunsch je Gerät eine Variable „online“.
 

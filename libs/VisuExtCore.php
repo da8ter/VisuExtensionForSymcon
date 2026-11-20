@@ -92,6 +92,21 @@ final class VisuExtCore
     }
 
     /**
+     * Rücksprung zur Startseite eines Geräts: Minuten ohne Bedienung (0 = aus, höchstens ein Tag) und
+     * die Startseite als Pfad auf dem Server der Visualisierung ('' = die Seite, mit der sie geladen wurde).
+     * @return array{minutes:int,page:string}
+     */
+    public static function cleanHome(mixed $minutes, mixed $page): array
+    {
+        $page = trim(self::cleanPage($page));
+        // nur ein Pfad dieses Servers: kein Schema, kein „//rechner“, kein Rückstrich
+        if ($page === '' || $page[0] !== '/' || str_starts_with($page, '//') || str_contains($page, '\\')) {
+            $page = '';
+        }
+        return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)), 'page' => $page];
+    }
+
+    /**
      * Antwort eines angedockten Moduls auf „Describe“ prüfen.
      * @return array{instance:int,name:string,version:string,active:bool,info:string}|null
      */

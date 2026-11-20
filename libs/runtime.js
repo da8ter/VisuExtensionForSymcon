@@ -14,6 +14,10 @@
  * Gemessen (Symcon 9.1, 20.11.2026): Symcon meldet einer Seite weder Ping noch Trennung, und Connect
  * trennt nach 120 s ohne Daten. Deshalb das Lebenszeichen: bleibt die Antwort aus, baut die Laufzeit
  * die Verbindung neu auf.
+ *
+ * Dazu der Rücksprung zur Startseite (Einstellung je Gerät im Modul, C.home und Nachricht „cfg“):
+ * nach der eingestellten Zeit ohne Berührung, Taste oder Mausrad zurück auf die Startseite. Die
+ * Visualisierung führt ihre Seite im Adress-Anhang (#/…); gewechselt wird über diesen Anhang.
  */
 (function () {
   'use strict';
@@ -79,6 +83,9 @@
         stopped = true;
         lost();
         break;
+      case 'cfg': // Einstellungen des Geräts aus dem Modul, auch nachträglich geändert
+        setHome(m.home);
+        break;
       case 'msg':
         (handlers[String(m.m)] || []).slice().forEach(function (fn) { call(fn, m.data); });
         break;
@@ -124,6 +131,43 @@
       if (open) call(fn, true);
     }
   };
+
+  // ── Rücksprung zur Startseite ──
+  var startPage = page(); // die Seite, mit der die Visualisierung geladen wurde
+  var home = { ms: 0, page: '' }, homeTimer = null, lastActivity = 0;
+
+  function homeTarget() {
+    return home.page || startPage;
+  }
+  function goHome() {
+    homeTimer = null;
+    var target = homeTarget();
+    if (page() === target) return;
+    var i = target.indexOf('#'), path = i < 0 ? target : target.slice(0, i);
+    if (path === location.pathname) location.hash = i < 0 ? '' : target.slice(i);
+    else location.assign(target);
+  }
+  function armHome() {
+    if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; }
+    if (home.ms > 0) homeTimer = setTimeout(goHome, home.ms);
+  }
+  function setHome(h) {
+    var minutes = h && typeof h.minutes === 'number' && h.minutes > 0 ? Math.min(h.minutes, 1440) : 0;
+    var target = h && typeof h.page === 'string' && h.page.charAt(0) === '/' && h.page.charAt(1) !== '/' ? h.page.slice(0, 200) : '';
+    if (home.ms === minutes * 60000 && home.page === target) return; // unverändert: die laufende Frist bleibt
+    home = { ms: minutes * 60000, page: target };
+    armHome();
+  }
+  function activity() {
+    var now = Date.now();
+    if (now - lastActivity < 1000) return; // die Frist höchstens einmal je Sekunde neu stellen
+    lastActivity = now;
+    armHome();
+  }
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (name) {
+    w.addEventListener(name, activity, { capture: true, passive: true });
+  });
+  setHome(C.home);
 
   // Zurück im Vordergrund oder wieder im Netz: nicht auf den nächsten Versuch warten
   function wake() {

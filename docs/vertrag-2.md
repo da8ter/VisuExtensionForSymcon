@@ -53,6 +53,7 @@ WebSocket auf `ws(s)://<Server der Visualisierung>/hook/visuext`. Die Laufzeit m
 | | `{t:"denied"}` | Gerät entfernt oder gesperrt: nicht weiter versuchen |
 | | `{t:"unknown"}` | Sitzung unbekannt (Modul neu geladen): neu anmelden |
 | | `{t:"beat"}` | Antwort auf das Lebenszeichen |
+| | `{t:"cfg", home:{minutes, page}}` | Einstellungen des Geräts: nach jeder Anmeldung und bei jeder Änderung |
 | | `{t:"msg", m, data}` | Nachricht des Moduls `m` |
 
 Bleibt das Lebenszeichen 90 Sekunden aus, gilt die Verbindung für Symcon als getrennt. Bleibt die Antwort zweieinhalb Takte aus, baut die Laufzeit die Verbindung neu auf (nach 1, 2, 5, 10, dann alle 30 Sekunden). Über Symcon Connect hält das Lebenszeichen die Verbindung zugleich offen: Connect trennt nach 120 Sekunden ohne Daten.
@@ -61,9 +62,10 @@ Bleibt das Lebenszeichen 90 Sekunden aus, gilt die Verbindung für Symcon als ge
 
 - **Geräte:** Name, Kennung, Zustand, zuletzt gesehen, aktuelle Seite. Umbenennen, sperren, entfernen.
 - **Angedockte Module** und, sobald es beides gibt, **welches Modul auf welchem Gerät läuft** (Vorgabe: jedes auf jedem).
+- **Zurück zur Startseite** je Gerät: Nach den eingestellten Minuten ohne Berührung, Taste oder Mausrad wechselt die Visualisierung zurück auf ihre Startseite (0 = aus). Ohne eigene Angabe ist das die Seite, mit der sie geladen wurde; sonst die Adresse wie in der Spalte „Seite“, zum Beispiel `/#/12345`. Die Laufzeit misst die Bedienpause im Browser und wechselt über den Adress-Anhang; die Einstellung wirkt sofort, auch auf einer geöffneten Visualisierung.
 - Auf Wunsch je Gerät eine Variable „online“. Die Variable „Verbundene Geräte“ gibt es immer.
 
-Funktionen für Skripte: `VISUEXT_StartPairing`, `VISUEXT_GetDevices`, `VISUEXT_UpdateDevice`, `VISUEXT_RemoveDevice`, `VISUEXT_SetModuleAllowed`.
+Funktionen für Skripte: `VISUEXT_StartPairing`, `VISUEXT_GetDevices`, `VISUEXT_UpdateDevice`, `VISUEXT_RemoveDevice`, `VISUEXT_SetModuleAllowed`, `VISUEXT_SetReturnHome` (Gerät, Minuten, Startseite).
 
 Je Symcon ist eine Instanz möglich; eine zweite meldet einen Fehlerstatus.
 

@@ -33,7 +33,10 @@
             "online": "online",
             "offline": "offline",
             "active": "aktiv",
-            "inactive": "inaktiv"
+            "inactive": "inaktiv",
+            "Back to start page after": "Zurück zur Startseite nach",
+            "Start page": "Startseite",
+            "Back to start page: after the set minutes without touch or key the visualization on that device returns to its start page (0 = off). Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column \"Page\", e.g. /#/12345.": "Zurück zur Startseite: Nach den eingestellten Minuten ohne Berührung oder Taste wechselt die Visualisierung auf diesem Gerät zurück auf ihre Startseite (0 = aus). Startseite leer = die Seite, mit der die Visualisierung geladen wurde; sonst die Adresse wie in der Spalte „Seite“, z. B. /#/12345."
         },
         "en": {
             "Visu Extension": "Visu Extension",
@@ -68,7 +71,10 @@
             "online": "online",
             "offline": "offline",
             "active": "active",
-            "inactive": "inactive"
+            "inactive": "inactive",
+            "Back to start page after": "Back to start page after",
+            "Start page": "Start page",
+            "Back to start page: after the set minutes without touch or key the visualization on that device returns to its start page (0 = off). Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column \"Page\", e.g. /#/12345.": "Back to start page: after the set minutes without touch or key the visualization on that device returns to its start page (0 = off). Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column \"Page\", e.g. /#/12345."
         }
     }
 }

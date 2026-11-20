@@ -111,6 +111,8 @@ trait VisuExtChannel
         }
         $this->SetTimerInterval('Sweep', VisuExtCore::BEAT_SECONDS * 1000);
         $this->push($addr, $port, ['t' => 'welcome', 'name' => (string) $device['name'], 'beat' => VisuExtCore::BEAT_SECONDS]);
+        // Einstellungen des Geräts: sie können sich geändert haben, während es getrennt war
+        $this->push($addr, $port, ['t' => 'cfg'] + $this->deviceConfig($device));
         $this->refreshPresence();
     }
 
@@ -192,6 +194,26 @@ trait VisuExtChannel
             $sent++;
         }
         return $sent;
+    }
+
+    /** Einstellungen, die die Laufzeit auf dem Gerät anwendet (im Skript und als Nachricht „cfg“). */
+    private function deviceConfig(array $device): array
+    {
+        return ['home' => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? '')];
+    }
+
+    /** Schickt einem Gerät seine Einstellungen auf allen offenen Verbindungen. */
+    private function sendConfig(string $deviceId): void
+    {
+        $device = $this->devices()[$deviceId] ?? null;
+        if (!is_array($device) || !empty($device['blocked'])) {
+            return;
+        }
+        foreach ($this->sessions() as $session) {
+            if ((string) $session['d'] === $deviceId) {
+                $this->push((string) $session['a'], (int) $session['p'], ['t' => 'cfg'] + $this->deviceConfig($device));
+            }
+        }
     }
 
     private function push(string $addr, int $port, array $msg): void

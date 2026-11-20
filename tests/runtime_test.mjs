@@ -16,7 +16,7 @@ const pruefe = (name, ist, soll) => {
 /** Fenster mit stellbarer Uhr; `sockets` sind alle geöffneten Verbindungen in Reihenfolge. */
 function welt() {
   let jetzt = 1_000_000, lauf = 0;
-  const timer = new Map(), sockets = [], horcher = {};
+  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [];
   class Socket {
     constructor(url) { this.url = url; this.gesendet = []; this.zu = false; sockets.push(this); }
     send(text) { if (this.zu) throw new Error('zu'); this.gesendet.push(JSON.parse(text)); }
@@ -28,7 +28,7 @@ function welt() {
   }
   const win = {
     WebSocket: Socket,
-    location: { origin: 'http://symcon.test:3777', pathname: '/', hash: '#/kueche' },
+    location: { origin: 'http://symcon.test:3777', pathname: '/', hash: '#/kueche', assign: (ziel) => { gewechselt.push(ziel); } },
     document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); } },
     addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); },
     setTimeout: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms }); return lauf; },
@@ -40,7 +40,7 @@ function welt() {
   };
   win.window = win; win.top = win;
   const ctx = vm.createContext(win);
-  const lade = () => vm.runInContext(QUELLE.replace('/*VISUEXT*/null', JSON.stringify(CONFIG)), ctx);
+  const lade = (mehr = {}) => vm.runInContext(QUELLE.replace('/*VISUEXT*/null', JSON.stringify({ ...CONFIG, ...mehr })), ctx);
   /** Uhr um ms vorstellen und fällige Timer in Zeitfolge laufen lassen. */
   const vor = (ms) => {
     const ziel = jetzt + ms;
@@ -55,7 +55,7 @@ function welt() {
     jetzt = ziel;
   };
   const melde = (n) => (horcher[n] || []).forEach((f) => f());
-  return { win, sockets, lade, vor, melde };
+  return { win, sockets, lade, vor, melde, gewechselt };
 }
 
 // ── Start, Warteliste, Anmeldung ──
@@ -152,6 +152,57 @@ function welt() {
   win.top = {};
   lade();
   pruefe('In einem Rahmen (Kachel) startet die Laufzeit nicht', [typeof win.visuExt, sockets.length], ['undefined', 0]);
+}
+
+// ── Rücksprung zur Startseite ──
+{
+  const { win, sockets, lade, vor, melde, gewechselt } = welt();
+  lade({ home: { minutes: 2, page: '' } });
+  const seite = () => win.location.pathname + win.location.hash;
+  win.location.hash = '#/flur';
+  melde('pointerdown');
+  vor(119000);
+  pruefe('Rücksprung: vor Ablauf der Frist bleibt die Seite', seite(), '/#/flur');
+  vor(1500);
+  pruefe('Nach zwei Minuten ohne Bedienung: zurück auf die Seite, mit der geladen wurde', seite(), '/#/kueche');
+  win.location.hash = '#/flur';
+  melde('keydown');
+  vor(100000);
+  melde('wheel');
+  vor(100000);
+  pruefe('Jede Bedienung stellt die Frist neu', seite(), '/#/flur');
+  vor(21000);
+  pruefe('und danach läuft sie wieder ab', seite(), '/#/kueche');
+  vor(600000);
+  pruefe('Auf der Startseite passiert nichts', [seite(), gewechselt], ['/#/kueche', []]);
+
+  const s = sockets[0];
+  s.oeffne();
+  s.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  s.empfange({ t: 'cfg', home: { minutes: 1, page: '/#/start' } });
+  vor(61000);
+  pruefe('Einstellung aus dem Modul wirkt sofort: andere Frist, eigene Startseite', seite(), '/#/start');
+  win.location.hash = '#/flur';
+  melde('touchstart');
+  s.empfange({ t: 'cfg', home: { minutes: 1, page: '/visu/#/7' } });
+  vor(61000);
+  pruefe('Startseite unter einem anderen Pfad: ganze Adresse wechseln', gewechselt, ['/visu/#/7']);
+  s.empfange({ t: 'cfg', home: { minutes: 1, page: 'https://boese.example/' } });
+  melde('pointerdown');
+  vor(61000);
+  pruefe('Fremde Adresse als Startseite gilt nicht: zurück auf die geladene Seite', [seite(), gewechselt.length], ['/#/kueche', 1]);
+  win.location.hash = '#/flur';
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' } });
+  melde('pointerdown');
+  vor(3600000);
+  pruefe('Ausgeschaltet: kein Rücksprung', seite(), '/#/flur');
+}
+{
+  const { win, lade, vor } = welt();
+  lade();
+  win.location.hash = '#/flur';
+  vor(3600000);
+  pruefe('Ohne Einstellung kein Rücksprung', win.location.hash, '#/flur');
 }
 
 console.log(fehler ? `\n${fehler} von ${anzahl} Prüfungen fehlgeschlagen` : `\nAlle ${anzahl} Prüfungen bestanden.`);
