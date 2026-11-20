@@ -1,6 +1,6 @@
 # Vertrag 2: das Modul „Visu-Erweiterung“
 
-Stand: 20.11.2026. Das Symcon-Modul in diesem Repo (`VisuExtension/`, Präfix `VISUEXT`) spricht diese Fassung. Die Browser-Erweiterung in `src/` spricht noch Vertrag 1 ([entwickler.md](entwickler.md)) und wird als Nächstes umgestellt.
+Stand: 20.11.2026. Das Symcon-Modul in diesem Repo (`VisuExtension/`, Präfix `VISUEXT`) und die Browser-Erweiterung in `src/` (ab 0.2) sprechen diese Fassung. Vertrag 1 gibt es nicht mehr.
 
 Die Erweiterung verbindet sich je Server mit genau einer Instanz „Visu-Erweiterung“. Andere Module docken in Symcon an diese Instanz an. Sie brauchen keinen eigenen Hook, keinen eigenen Schlüssel und kein Adressfeld.
 
@@ -8,57 +8,9 @@ Die Erweiterung verbindet sich je Server mit genau einer Instanz „Visu-Erweite
 Browser (Erweiterung) ──/hook/visuext──▶ Visu-Erweiterung ──Datenfluss──▶ angedockte Module
 ```
 
-## Für Modulhersteller: andocken
+## Für Modulhersteller
 
-Eine vollständige Vorlage liegt in [`examples/`](../examples/).
-
-1. In die `module.json` des Moduls:
-   ```json
-   "parentRequirements": ["{A5B87602-1C34-4981-89A5-62A0735CB359}"],
-   "implemented":        ["{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}"]
-   ```
-2. `GetCompatibleParents()` nennt die Visu-Erweiterung (`{CB9C6C38-9B97-45CA-BFB5-EC7F936AF3FF}`) mit `type: "connect"`. Das Modul muss ohne sie weiter funktionieren (`HasActiveParent()` prüfen).
-3. `ReceiveData()` beantwortet drei Anfragen. Die Rückgabe ist die Antwort; `''` heißt „nicht für mich“.
-
-| Anfrage | Felder | Antwort |
-|---|---|---|
-| `Describe` | `Target: 0` | JSON `{instance, name, version, active, info}`. Mit `active: false` lädt die Erweiterung das Skript nicht; `info` nennt den Grund. |
-| `Script` | `Target: <Instanz>`, `Device: {id, name}` | Der Skripttext (JavaScript), mit eingesetzter Konfiguration. Höchstens rund 1 MB. |
-| `Event` | `Target: <Instanz>`, `Device: {id, name}`, `Data` | `''` oder JSON. Eine Antwort geht als Nachricht an genau dieses Gerät zurück. |
-
-Jedes Paket trägt `DataID` (`{9E7FA1CF-…}`), `Action` und `Target` in dieser Reihenfolge. Mit `SetReceiveDataFilter('.*"Target":(0|<Instanz>)[,}].*')` kommen nur die eigenen Pakete an; `ReceiveData()` prüft `Target` trotzdem selbst.
-
-4. Senden an die Geräte mit `SendDataToParent()` (DataID `{A5B87602-…}`):
-
-| Aktion | Felder | Antwort |
-|---|---|---|
-| `Send` | `Instance`, `Device` (Kennung oder `''` für alle), `Data` | `{ok, sent}`. `sent` zählt Verbindungen, bestätigt aber keine Zustellung. |
-| `Devices` | `Instance` | `{ok, devices: [{id, name, online}]}`: die Geräte, auf denen das Modul läuft. |
-
-### Das Skript
-
-Die Erweiterung hängt jedes Skript einmal je Laden der Visualisierung als `<script src>` ins oberste Fenster. Die Regeln aus Vertrag 1 gelten weiter: doppeltes Laden vertragen, nichts über den Aufbau der Visualisierung voraussetzen, eindeutige Namen, Texte nie als HTML einsetzen.
-
-Den Kanal zu Symcon stellt die Laufzeit `window.visuExt` bereit. Sie ist das erste Skript der Beschreibung, die Reihenfolge der Ausführung ist aber offen. Deshalb über die Warteliste holen:
-
-```js
-(window.visuExtReady = window.visuExtReady || []).push(function (ext) {
-  ext.on(INSTANZ, function (daten) { /* Nachricht des eigenen Moduls (Aktion „Send“) */ });
-  ext.send(INSTANZ, { taste: 3 });           // an das eigene Modul (Aktion „Event“)
-  ext.onState(function (verbunden) { });     // Kanal steht / ist abgerissen
-});
-```
-
-| | |
-|---|---|
-| `ext.v` | Fassung des Vertrags, `2` |
-| `ext.device` | `{id, name}` des gekoppelten Browsers |
-| `ext.connected()` | `true`, solange der Kanal steht und das Gerät angemeldet ist |
-| `ext.send(instanz, daten)` | Schickt `daten` an das Modul. Ohne Kanal wartet die Nachricht (höchstens 50) und die Rückgabe ist `false`. |
-| `ext.on(instanz, fn)` | Empfänger für Nachrichten des Moduls; die Rückgabe meldet ihn wieder ab |
-| `ext.onState(fn)` | `fn(true/false)` bei jedem Wechsel; sofort, falls der Kanal schon steht |
-
-`INSTANZ` ist die Instanz-ID des eigenen Moduls; das Modul setzt sie beim Ausliefern in das Skript ein.
+Wie ein Modul andockt (Datenfluss, die drei Anfragen, das Skript und die Laufzeit `window.visuExt`), steht in [entwickler.md](entwickler.md); eine Vorlage liegt in [`examples/`](../examples/). Dieser Text beschreibt, wie Erweiterung und Modul miteinander sprechen.
 
 ## Für die Erweiterung: der Hook
 
@@ -120,9 +72,13 @@ Je Symcon ist eine Instanz möglich; eine zweite meldet einen Fehlerstatus.
 ```bash
 php tests/modul/module_test.php   # Modul gegen eine SDK-Attrappe
 node tests/runtime_test.mjs       # Laufzeit mit nachgestelltem Fenster, WebSocket und Uhr
+node tests/core_test.mjs          # Prüfregeln der Erweiterung
+node tests/inject_test.mjs        # Lader und Brücke in Headless-Chrome
+node tests/options_test.mjs       # Einrichtung (koppeln), Chrome-Schnittstellen als Attrappe
+node tests/extension_test.mjs     # die echte Erweiterung, Server nicht unter localhost
 ```
 
-Am 20.11.2026 zusätzlich an Symcon 9.1 durchgespielt, mit einem angedockten Probe-Modul nach der Vorlage: koppeln, Beschreibung, Skripte, Kanal, Nachrichten in beide Richtungen, Abmelden ohne Lebenszeichen. Im echten Chrome liefen Laufzeit und Beispielskript auf der Seite der Visualisierung, auch über ein Neuladen des Moduls hinweg. Über Symcon Connect geprüft: koppeln, Beschreibung, Laufzeit und Anmeldung am Kanal. Nicht geprüft: mit der Erweiterung selbst (sie spricht noch Vertrag 1), Dauerbetrieb.
+Am 20.11.2026 zusätzlich an einem laufenden Symcon durchgespielt, mit der echten Erweiterung in Chrome und einem angedockten Probe-Modul nach der Vorlage: koppeln in der Einrichtung, Laufzeit und Skript des Moduls auf der Seite der Visualisierung, Nachrichten in beide Richtungen, Sperren des Geräts (Kanal getrennt, nach dem Neuladen wird nichts mehr geladen, die Einrichtung nennt den Grund). Über Symcon Connect mit der echten Erweiterung: koppeln, Laufzeit geladen, Kanal steht. Nicht geprüft: Edge, Dauerbetrieb, die Freigabe-Abfrage des Browsers (im Prüflauf vorab erteilt).
 
 ## English summary
 

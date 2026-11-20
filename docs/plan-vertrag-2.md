@@ -1,6 +1,6 @@
 # Plan: Vertrag 2 – ein Symcon-Modul als einzige Verbindung
 
-Stand: 20.11.2026. Schritt 1 (Messung) und Schritt 2 (Symcon-Modul) sind erledigt; was das Modul tut, steht in [vertrag-2.md](vertrag-2.md). Offen: Erweiterung umstellen, Benachrichtigungs-Kachel andocken, Rücksprung und Wächter. Der Name bleibt beim Arbeitstitel „Visu-Erweiterung“.
+Stand: 20.11.2026. Schritt 1 (Messung), Schritt 2 (Symcon-Modul) und Schritt 3 (Erweiterung) sind erledigt; was Modul und Erweiterung tun, steht in [vertrag-2.md](vertrag-2.md), das Andocken in [entwickler.md](entwickler.md). Offen: Benachrichtigungs-Kachel andocken, Rücksprung und Wächter. Der Name bleibt beim Arbeitstitel „Visu-Erweiterung“.
 
 ## Ziel
 
@@ -111,6 +111,6 @@ Nicht gemessen: Dauerbetrieb über Stunden, mehrere Dutzend Geräte gleichzeitig
 
 1. ~~WebSocket messen und den Weg festlegen.~~ Erledigt am 20.11.2026.
 2. ~~Symcon-Modul: Hook, Kopplung, Geräteliste, Datenfluss zum Andocken, Auslieferung.~~ Erledigt am 20.11.2026 (`VisuExtension/`, `libs/`, Tests in `tests/modul/` und `tests/runtime_test.mjs`). Abweichungen vom Entwurf oben: fester Hook `/hook/visuext` und eine Instanz je Symcon (das Koppeln braucht so keine Instanz-ID); die Beschreibung nennt keinen Kanal, die Laufzeit kennt ihn; Skript-Adressen tragen ein Ticket statt des Schlüssels; Freigaben als Sperrliste je Gerät.
-3. Erweiterung auf Vertrag 2 umbauen, Vertrag 1 entfernen, Tests anpassen (`extension_test.mjs` mit echter Erweiterung).
+3. ~~Erweiterung auf Vertrag 2 umbauen, Vertrag 1 entfernen, Tests anpassen.~~ Erledigt am 20.11.2026 (Fassung 0.2.0). Einrichtung: Adresse der Visualisierung, Code, Name; eine Verbindung je Server als `{origin, id, key, name, server}`. Die Beschreibung holt die Erweiterung per POST mit Kennung und Schlüssel im Rumpf (als Text, ohne Voranfrage), die Skripte laufen in der Reihenfolge der Beschreibung. Höchstens 16 Skripte. Mit der echten Erweiterung an einem laufenden Symcon geprüft, direkt und über Symcon Connect.
 4. Benachrichtigungs-Kachel andocken (ebenso die Klebezettel, die Vertrag 1 auch sprechen).
 5. Visu-Steuerung: Rücksprung und Wächter.

@@ -1,63 +1,83 @@
-# Ein Modul anbinden (Vertrag 1)
+# Ein Modul andocken (Vertrag 2)
 
-> **Wird abgelöst.** Diese Seite beschreibt Vertrag 1, den die Erweiterung 0.1.1 spricht. Der Nachfolger steht in [vertrag-2.md](vertrag-2.md): ein Symcon-Modul als einzige Verbindung, andere Module docken daran an. Die Vorlage in [`examples/`](../examples/) zeigt schon Vertrag 2.
+Die Browser-Erweiterung verbindet sich je Server mit genau einer Instanz des Symcon-Moduls „Visu-Erweiterung“. Dein Modul dockt in Symcon an diese Instanz an. Es braucht dafür keinen eigenen Hook, keinen eigenen Schlüssel und kein Adressfeld im Formular: Sein Skript liefert die Visu-Erweiterung aus, und Nachrichten laufen über ihren Kanal zu den gekoppelten Browsern.
 
-Die Visu-Erweiterung lädt Skripte deines Moduls ins oberste Fenster der Kachel-Visualisierung. Dein Modul braucht dafür nur einen Hook, der zwei Dinge ausliefert: eine Beschreibung und das Skript. Eine vollständige Vorlage liegt in [`examples/`](../examples/).
-
-## Ablauf
-
-1. Dein Modul registriert einen Hook und erzeugt je Instanz einen eigenen Schlüssel.
-2. Das Formular des Moduls zeigt die **Verbindungsadresse**, zum Beispiel `/hook/mein-modul/<ID>?t=<Schlüssel>&k=ext`. Den Server setzt der Nutzer davor, den kennt nur sein Browser.
-3. Der Nutzer trägt die Adresse in der Erweiterung ein und gibt den Server frei.
-4. Bei jedem Laden der Visualisierung ruft die Erweiterung die Adresse ab, prüft die Beschreibung und hängt die genannten Skripte als `<script src>` an.
-
-## Die Beschreibung
-
-Die Verbindungsadresse antwortet mit JSON:
-
-```json
-{
-  "visuExtension": 1,
-  "name": "Mein Modul",
-  "version": "1.0",
-  "scripts": ["/hook/mein-modul/<ID>?t=<Schlüssel>&k=start.js"],
-  "info": ""
-}
+```
+Browser (Erweiterung) ──/hook/visuext──▶ Visu-Erweiterung ──Datenfluss──▶ dein Modul
 ```
 
-| Feld | Pflicht | Bedeutung |
-|------|---------|-----------|
-| `visuExtension` | ja | Fassung des Vertrags, die Zahl `1`. |
-| `name` | ja | Name in der Einrichtung, höchstens 100 Zeichen. Sinnvoll ist der Name der Instanz. |
-| `scripts` | ja | Liste der Skript-Adressen, höchstens 8, auch leer. Relativ zum Server oder vollständig. |
-| `version` | nein | Text oder Zahl, wird neben „Verbunden“ angezeigt. |
-| `info` | nein | Hinweis für den Nutzer, wenn `scripts` leer ist, zum Beispiel „Funktion X ist ausgeschaltet“. |
+Eine vollständige Vorlage liegt in [`examples/`](../examples/). Wie Erweiterung und Visu-Erweiterung miteinander sprechen (Koppeln, Beschreibung, Kanal), steht in [vertrag-2.md](vertrag-2.md); zum Andocken musst du das nicht kennen.
 
-Was die Erweiterung durchsetzt:
+## Andocken
 
-- Die Verbindungsadresse und jedes Skript liegen unter `/hook/` auf **demselben Server** (gleiches Protokoll, gleicher Name, gleicher Port).
-- Ist ein einziges Skript unzulässig, lädt die Erweiterung von dieser Verbindung nichts.
-- Antwortet die Adresse nicht mit Status 200 und gültigem JSON, lädt sie nichts.
+1. In die `module.json` des Moduls:
+   ```json
+   "parentRequirements": ["{A5B87602-1C34-4981-89A5-62A0735CB359}"],
+   "implemented":        ["{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}"]
+   ```
+2. `GetCompatibleParents()` nennt die Visu-Erweiterung (`{CB9C6C38-9B97-45CA-BFB5-EC7F936AF3FF}`) mit `type: "connect"`. Das Modul muss ohne sie weiter funktionieren (`HasActiveParent()` prüfen).
+3. `ReceiveData()` beantwortet drei Anfragen. Die Rückgabe ist die Antwort; `''` heißt „nicht für mich“.
 
-Antworte mit `Cache-Control: no-store`. Die Erweiterung ruft die Beschreibung bei jedem Laden der Visualisierung neu ab; so wirken Änderungen an deinem Modul ohne Zutun des Nutzers.
+| Anfrage | Felder | Antwort |
+|---|---|---|
+| `Describe` | `Target: 0` | JSON `{instance, name, version, active, info}`. Mit `active: false` lädt die Erweiterung das Skript nicht; `info` nennt den Grund. |
+| `Script` | `Target: <Instanz>`, `Device: {id, name}` | Der Skripttext (JavaScript), mit eingesetzter Konfiguration. Höchstens rund 1 MB. |
+| `Event` | `Target: <Instanz>`, `Device: {id, name}`, `Data` | `''` oder JSON. Eine Antwort geht als Nachricht an genau dieses Gerät zurück. |
+
+Jedes Paket trägt `DataID` (`{9E7FA1CF-…}`), `Action` und `Target` in dieser Reihenfolge. Mit `SetReceiveDataFilter('.*"Target":(0|<Instanz>)[,}].*')` kommen nur die eigenen Pakete an; `ReceiveData()` prüft `Target` trotzdem selbst.
+
+4. Senden an die Geräte mit `SendDataToParent()` (DataID `{A5B87602-…}`):
+
+| Aktion | Felder | Antwort |
+|---|---|---|
+| `Send` | `Instance`, `Device` (Kennung oder `''` für alle), `Data` | `{ok, sent}`. `sent` zählt Verbindungen, bestätigt aber keine Zustellung. |
+| `Devices` | `Instance` | `{ok, devices: [{id, name, online}]}`: die Geräte, auf denen das Modul läuft. |
+
+`GetCompatibleParents()` gibt es ab Symcon 8.2.
 
 ## Das Skript
 
-- Es läuft **einmal je Laden** der Visualisierung, zum Zeitpunkt `document_idle`, im obersten Fenster. Die Visualisierung lädt beim Seitenwechsel nicht neu: Dein Skript lebt also, bis der Nutzer die Seite neu lädt.
+- Die Erweiterung hängt es **einmal je Laden** der Visualisierung als `<script src>` ins oberste Fenster. Die Visualisierung lädt beim Seitenwechsel nicht neu: Dein Skript lebt, bis der Nutzer die Seite neu lädt.
 - Es läuft nicht in Kacheln, nicht in der Verwaltungskonsole (`/console`) und nicht auf Hook-Seiten.
-- **Doppeltes Laden vertragen.** Dieselbe Verbindung kann doppelt eingetragen sein, und eine Kachel deines Moduls kann denselben Code ebenfalls ins Hauptfenster laden. Ein Merker am Fenster genügt (siehe Vorlage).
+- **Doppeltes Laden vertragen.** Eine Kachel deines Moduls kann denselben Code ebenfalls ins Hauptfenster laden. Ein Merker am Fenster genügt (siehe Vorlage).
 - **Nichts voraussetzen.** Der Aufbau der Visualisierung ist keine zugesicherte Schnittstelle von Symcon. Hänge eigene Elemente an `document.body` und fasse fremde nicht an.
 - **Eindeutige Namen** für Globale, CSS-Klassen und `localStorage`-Schlüssel.
 - Das Skript-Element wird nach dem Laden wieder entfernt. `document.currentScript` steht nur während der ersten Ausführung zur Verfügung.
-- Das Modul muss ohne die Erweiterung weiter funktionieren. Die Erweiterung stellt deinem Skript bewusst nichts bereit.
+- Dein Modul muss ohne die Erweiterung weiter funktionieren.
 
-Konfiguration bekommt das Skript am einfachsten, indem der Hook sie beim Ausliefern einsetzt (Platzhalter `/*CONFIG*/null` in der Vorlage). Lege dort nichts hinein, was nicht jeder Betrachter der Visualisierung sehen darf.
+Konfiguration bekommt das Skript, indem dein Modul sie beim Ausliefern einsetzt (Platzhalter `/*CONFIG*/null` in der Vorlage). Die Anfrage `Script` nennt das Gerät, du kannst also je Browser anders antworten.
 
-## Schlüssel und Sicherheit
+### Der Kanal zu deinem Modul
 
-- Schütze den Hook mit einem zufälligen Schlüssel je Instanz (`bin2hex(random_bytes(16))`), prüfe ihn mit `hash_equals` und antworte sonst mit 403. Hooks sind ohne das Passwort der Visualisierung erreichbar.
-- Ein Skript der Erweiterung hat dieselben Möglichkeiten wie eine Kachel deines Moduls im Browser. Schreibende Hook-Aufrufe sollten trotzdem nur das Nötigste können.
+Den Kanal zu Symcon stellt die Laufzeit `window.visuExt` bereit. Sie ist das erste Skript der Beschreibung, die Reihenfolge der Ausführung ist aber offen. Deshalb über die Warteliste holen:
+
+```js
+(window.visuExtReady = window.visuExtReady || []).push(function (ext) {
+  ext.on(INSTANZ, function (daten) { /* Nachricht des eigenen Moduls (Aktion „Send“) */ });
+  ext.send(INSTANZ, { taste: 3 });           // an das eigene Modul (Aktion „Event“)
+  ext.onState(function (verbunden) { });     // Kanal steht / ist abgerissen
+});
+```
+
+| | |
+|---|---|
+| `ext.v` | Fassung des Vertrags, `2` |
+| `ext.device` | `{id, name}` des gekoppelten Browsers |
+| `ext.connected()` | `true`, solange der Kanal steht und das Gerät angemeldet ist |
+| `ext.send(instanz, daten)` | Schickt `daten` an das Modul. Ohne Kanal wartet die Nachricht (höchstens 50) und die Rückgabe ist `false`. |
+| `ext.on(instanz, fn)` | Empfänger für Nachrichten des Moduls; die Rückgabe meldet ihn wieder ab |
+| `ext.onState(fn)` | `fn(true/false)` bei jedem Wechsel; sofort, falls der Kanal schon steht |
+
+`INSTANZ` ist die Instanz-ID des eigenen Moduls; das Modul setzt sie beim Ausliefern in das Skript ein.
+
+Nachrichten sind JSON, höchstens rund 64 kB je Nachricht. `Send` bestätigt keine Zustellung: Ist ein Browser gerade nicht verbunden, bekommt er die Nachricht nicht nachgereicht. Was ein Gerät beim Verbinden wissen muss, holt sich das Skript in `onState` selbst ab.
+
+## Sicherheit
+
+- Das Skript läuft im Fenster der Visualisierung, mit denselben Möglichkeiten wie eine Kachel deines Moduls. Lege nichts hinein, was nicht jeder Betrachter dieser Visualisierung sehen darf.
+- Ereignisse (`Event`) kommen von einem gekoppelten, nicht gesperrten Browser; die Visu-Erweiterung nennt dir, von welchem. Behandle den Inhalt trotzdem wie jede Eingabe von außen: prüfen, und nur das Nötigste auslösen.
 - Texte aus Symcon nie als HTML einsetzen (`textContent` statt `innerHTML`).
+- Der Nutzer kann dein Modul je Gerät abschalten und Geräte sperren; dein Skript wird dort dann nicht mehr ausgeliefert.
 
 ## Geteilte Icons (optional)
 
@@ -71,14 +91,15 @@ Die Funktion `icons()` in [`examples/start-script.js`](../examples/start-script.
 
 ## Prüfen
 
-- Beschreibung abrufen: `curl 'http://<Server>/hook/mein-modul/<ID>?t=<Schlüssel>&k=ext'`. Ohne oder mit falschem Schlüssel muss 403 kommen.
-- Erweiterung entpackt laden, Adresse eintragen: Die Einrichtung nennt den Grund, wenn etwas nicht passt.
-- In der Visualisierung die Entwicklerwerkzeuge öffnen: Fehler deines Skripts stehen in der Konsole der Seite.
+1. Instanz „Visu-Erweiterung“ anlegen, dein Modul als Kind verbinden: Es erscheint im Formular unter „Angedockte Module“ mit Name, Version und Zustand.
+2. Einen Browser koppeln (Erweiterung entpackt laden, Adresse und Code eintragen) und die Visualisierung neu laden.
+3. In den Entwicklerwerkzeugen der Visualisierung: `visuExt.connected()` ist `true`, Fehler deines Skripts stehen in der Konsole der Seite.
+4. Aus Symcon senden (Aktion `Send`) und im Debug-Fenster deiner Instanz die Ereignisse des Skripts ansehen.
 
 ## Fassungen des Vertrags
 
-`visuExtension: 1` ist diese Fassung. Neue Felder kommen abwärtskompatibel dazu; unbekannte Felder übergeht die Erweiterung. Ein Bruch bekäme die Zahl `2`; die Erweiterung soll dann beide Fassungen verstehen.
+`visuExtension: 2` ist diese Fassung. Fassung 1 (je Modul ein eigener Hook mit Schlüssel und eine eigene Adresse in der Erweiterung) gibt es nicht mehr; die Erweiterung ab 0.2 spricht nur Fassung 2.
 
 ## English summary
 
-A module connects through a hook protected by its own per-instance token. The **connection address** (any URL under `/hook/…`) returns JSON: `visuExtension` (must be `1`), `name`, `scripts` (up to 8 URLs, may be empty), optional `version` and `info`. Every script must be served from the same origin under `/hook/`; otherwise nothing from that connection is loaded. The extension fetches the description on every load of the visualization and appends each script once as a classic `<script src>` to the top window (not in tiles, the console or hook pages). Scripts must tolerate being loaded twice, must not rely on the structure of the visualization, and should use unique names. See [`examples/`](../examples/) for a PHP hook and a start script, including the optional shared icon slot `window.__symconIcons`.
+A module docks onto the Symcon instance “Visu Extension” through the data flow and needs no hook, token or address field of its own. Add `parentRequirements` `{A5B87602-1C34-4981-89A5-62A0735CB359}` and `implemented` `{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}` to its `module.json`, offer the Visu Extension in `GetCompatibleParents()` and answer three requests in `ReceiveData()`: `Describe` (name, version, active), `Script` (the JavaScript text with its configuration inserted) and `Event` (data sent by the script). Send to the paired browsers with `SendDataToParent()` (`Send`, `Devices`). In the page, get the runtime through the queue `window.visuExtReady` and use `ext.on`, `ext.send` and `ext.onState`. Scripts run once per load in the top window of the visualization, must tolerate being loaded twice, must not rely on the structure of the visualization and should use unique names. See [`examples/`](../examples/) for a complete template, including the optional shared icon slot `window.__symconIcons`.
