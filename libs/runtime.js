@@ -18,6 +18,11 @@
  * Dazu der Rücksprung zur Startseite (Einstellung je Gerät im Modul, C.home und Nachricht „cfg“):
  * nach der eingestellten Zeit ohne Berührung, Taste oder Mausrad zurück auf die Startseite. Die
  * Visualisierung führt ihre Seite im Adress-Anhang (#/…); gewechselt wird über diesen Anhang.
+ *
+ * Und der Bildschirmschoner (C.saver, „cfg“, „saver“): eine Ebene über der ganzen Visualisierung,
+ * schwarz oder mit Uhr. Eigene Elemente am body liegen über der Visualisierung und fangen Zeiger ab
+ * (gemessen 10.11.2026): Die erste Berührung weckt deshalb nur auf und löst in der Visu nichts aus.
+ * Abschalten oder dimmen kann eine Seite das Display nicht, nur abdunkeln.
  */
 (function () {
   'use strict';
@@ -85,6 +90,10 @@
         break;
       case 'cfg': // Einstellungen des Geräts aus dem Modul, auch nachträglich geändert
         setHome(m.home);
+        setSaver(m.saver);
+        break;
+      case 'saver': // aus Symcon: sofort einschalten oder aufwecken
+        if (m.on === true) startSaver(); else wakeSaver();
         break;
       case 'msg':
         (handlers[String(m.m)] || []).slice().forEach(function (fn) { call(fn, m.data); });
@@ -129,7 +138,9 @@
     onState: function (fn) {
       stateHandlers.push(fn);
       if (open) call(fn, true);
-    }
+    },
+    /** Weckt das Gerät aus dem Bildschirmschoner, z. B. wenn ein Modul etwas Wichtiges zeigt. */
+    wake: function () { wakeSaver(); }
   };
 
   // ── Rücksprung zur Startseite ──
@@ -158,16 +169,84 @@
     home = { ms: minutes * 60000, page: target };
     armHome();
   }
-  function activity() {
+  function activity(ev) {
+    if (saverLayer) {
+      // Die erste Bedienung weckt nur auf. Zeiger und Finger weckt die Ebene selbst mit dem Ende der
+      // Geste (click): fiele sie schon beim Aufsetzen weg, bekäme die Visualisierung den Rest der Geste.
+      if (ev && (ev.type === 'keydown' || ev.type === 'wheel')) wakeSaver();
+      return;
+    }
     var now = Date.now();
-    if (now - lastActivity < 1000) return; // die Frist höchstens einmal je Sekunde neu stellen
+    if (now - lastActivity < 1000) return; // die Fristen höchstens einmal je Sekunde neu stellen
     lastActivity = now;
     armHome();
+    armSaver();
+  }
+
+  // ── Bildschirmschoner ──
+  var saver = { ms: 0, mode: 'black' }, saverTimer = null, saverLayer = null, saverTick = null;
+
+  function armSaver() {
+    if (saverTimer) { clearTimeout(saverTimer); saverTimer = null; }
+    if (saver.ms > 0 && !saverLayer) saverTimer = setTimeout(startSaver, saver.ms);
+  }
+  function setSaver(s) {
+    var minutes = s && typeof s.minutes === 'number' && s.minutes > 0 ? Math.min(s.minutes, 1440) : 0;
+    var mode = s && s.mode === 'clock' ? 'clock' : 'black';
+    if (saver.ms === minutes * 60000 && saver.mode === mode) return;
+    saver = { ms: minutes * 60000, mode: mode };
+    if (saverLayer) drawSaver(); // läuft er gerade, nur den Inhalt wechseln
+    else armSaver();
+  }
+  /* Uhr und Datum; alle Minute neu und an anderer Stelle, damit sich nichts einbrennt. */
+  function drawSaver() {
+    if (!saverLayer) return;
+    var box = saverLayer.firstChild;
+    if (saver.mode !== 'clock') { box.style.display = 'none'; return; }
+    var now = new Date();
+    box.style.display = 'block';
+    box.firstChild.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    box.lastChild.textContent = now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
+    // innerhalb des Bildschirms bleiben: der Platz hängt von Schriftgröße und Fenster ab
+    var freeX = saverLayer.clientWidth - box.offsetWidth, freeY = saverLayer.clientHeight - box.offsetHeight;
+    if (freeX > 0 && freeY > 0) {
+      box.style.left = Math.floor(Math.random() * freeX) + 'px';
+      box.style.top = Math.floor(Math.random() * freeY) + 'px';
+    } else {
+      box.style.left = Math.floor(Math.random() * 20) + '%';
+      box.style.top = Math.floor(Math.random() * 60) + '%';
+    }
+  }
+  function startSaver() {
+    if (saverTimer) { clearTimeout(saverTimer); saverTimer = null; }
+    if (saverLayer || !document.body) return;
+    var d = document, layer = d.createElement('div'), box = d.createElement('div'), time = d.createElement('div'), date = d.createElement('div');
+    layer.setAttribute('data-visuext', 'saver');
+    layer.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;z-index:2147483647;background:#000;cursor:none;touch-action:none;';
+    box.style.cssText = 'position:absolute;color:#8a8a8e;font:300 16px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;white-space:nowrap;';
+    time.style.cssText = 'font-size:min(18vw,160px);font-weight:200;letter-spacing:.02em;';
+    date.style.cssText = 'font-size:min(4vw,30px);margin-top:.2em;';
+    box.appendChild(time);
+    box.appendChild(date);
+    layer.appendChild(box);
+    layer.addEventListener('click', wakeSaver);
+    d.body.appendChild(layer);
+    saverLayer = layer;
+    drawSaver();
+    saverTick = setInterval(drawSaver, 60000);
+  }
+  function wakeSaver() {
+    if (saverTick) { clearInterval(saverTick); saverTick = null; }
+    if (saverLayer) { saverLayer.remove(); saverLayer = null; }
+    lastActivity = Date.now();
+    armHome();
+    armSaver();
   }
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (name) {
     w.addEventListener(name, activity, { capture: true, passive: true });
   });
   setHome(C.home);
+  setSaver(C.saver);
 
   // Zurück im Vordergrund oder wieder im Netz: nicht auf den nächsten Versuch warten
   function wake() {

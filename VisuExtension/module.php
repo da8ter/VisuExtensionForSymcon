@@ -112,7 +112,7 @@ class VisuExtension extends IPSModuleStrict
                 'rowCount' => 6,
                 'add'      => false,
                 'delete'   => true,
-                'onEdit'   => 'VISUEXT_UpdateDevice($id, $Devices[\'Id\'], $Devices[\'Name\'], $Devices[\'Blocked\']); VISUEXT_SetReturnHome($id, $Devices[\'Id\'], $Devices[\'HomeMinutes\'], $Devices[\'HomePage\']);',
+                'onEdit'   => 'VISUEXT_UpdateDevice($id, $Devices[\'Id\'], $Devices[\'Name\'], $Devices[\'Blocked\']);',
                 'onDelete' => 'VISUEXT_RemoveDevice($id, $Devices[\'Id\']);',
                 'columns'  => [
                     ['caption' => 'Name', 'name' => 'Name', 'width' => 'auto', 'edit' => ['type' => 'ValidationTextBox']],
@@ -120,8 +120,6 @@ class VisuExtension extends IPSModuleStrict
                     ['caption' => 'State', 'name' => 'State', 'width' => '110px'],
                     ['caption' => 'Last seen', 'name' => 'Seen', 'width' => '160px'],
                     ['caption' => 'Page', 'name' => 'Page', 'width' => '220px'],
-                    ['caption' => 'Back to start page after', 'name' => 'HomeMinutes', 'width' => '200px', 'edit' => ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1440, 'suffix' => ' min']],
-                    ['caption' => 'Start page', 'name' => 'HomePage', 'width' => '200px', 'edit' => ['type' => 'ValidationTextBox']],
                     ['caption' => 'Blocked', 'name' => 'Blocked', 'width' => '90px', 'edit' => ['type' => 'CheckBox']],
                 ],
                 'values'   => $this->deviceRows(),
@@ -173,9 +171,7 @@ class VisuExtension extends IPSModuleStrict
                 ['type' => 'Label', 'caption' => 'Connects the browser extension "Visu-Erweiterung für Symcon" with this Symcon. Each browser is paired once; other modules dock onto this instance and need no connection of their own.'],
                 ['type' => 'CheckBox', 'name' => 'DeviceVariables', 'caption' => 'Create a variable "online" for each device'],
             ],
-            'actions'  => array_merge($actions, [
-                ['type' => 'Label', 'caption' => 'Back to start page: after the set minutes without touch or key the visualization on that device returns to its start page (0 = off). Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column "Page", e.g. /#/12345.'],
-            ]),
+            'actions'  => array_merge($actions, [$this->kioskPanel()]),
             'status'   => [
                 ['code' => IS_ACTIVE, 'icon' => 'active', 'caption' => 'Active'],
                 ['code' => self::STATUS_SECOND_INSTANCE, 'icon' => 'error', 'caption' => 'There is already an instance of this module. Only one per Symcon is possible.'],
@@ -297,12 +293,48 @@ class VisuExtension extends IPSModuleStrict
                 'State'   => $this->Translate($device['blocked'] ? 'blocked' : ($device['online'] ? 'online' : 'offline')),
                 'Seen'    => $device['seen'] > 0 ? date('d.m.Y H:i', $device['seen']) : '–',
                 'Page'    => $device['page'],
-                'HomeMinutes' => $device['home']['minutes'],
-                'HomePage'    => $device['home']['page'],
                 'Blocked' => $device['blocked'],
             ];
         }
         return $rows;
+    }
+
+    /** Aufklappbereich: Rücksprung zur Startseite und Bildschirmschoner je Gerät. */
+    private function kioskPanel(): array
+    {
+        $rows = [];
+        foreach ($this->deviceList() as $device) {
+            $rows[] = ['Id' => $device['id'], 'Device' => $device['name'], 'HomeMinutes' => $device['home']['minutes'], 'HomePage' => $device['home']['page'],
+                'SaverMinutes' => $device['saver']['minutes'], 'SaverMode' => $device['saver']['mode']];
+        }
+        $minutes = ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1440, 'suffix' => ' min'];
+        return [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Return to start page and screensaver',
+            'items'   => [
+                ['type' => 'Label', 'caption' => 'Both count the time without touch, click, key or mouse wheel on that device (0 = off) and take effect immediately.'],
+                ['type' => 'Label', 'caption' => 'Start page empty = the page the visualization was loaded with; otherwise the address as shown in the column "Page" of the device list, e.g. /#/12345.'],
+                ['type' => 'Label', 'caption' => 'The screensaver covers the visualization; the first touch only wakes it up. From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver.'],
+                [
+                    'type'     => 'List',
+                    'name'     => 'Kiosk',
+                    'rowCount' => 6,
+                    'add'      => false,
+                    'delete'   => false,
+                    'onEdit'   => 'VISUEXT_SetReturnHome($id, $Kiosk[\'Id\'], $Kiosk[\'HomeMinutes\'], $Kiosk[\'HomePage\']); VISUEXT_SetScreensaver($id, $Kiosk[\'Id\'], $Kiosk[\'SaverMinutes\'], $Kiosk[\'SaverMode\']);',
+                    'columns'  => [
+                        ['caption' => 'Device', 'name' => 'Device', 'width' => 'auto'],
+                        ['caption' => 'Back to start page after', 'name' => 'HomeMinutes', 'width' => '200px', 'edit' => $minutes],
+                        ['caption' => 'Start page', 'name' => 'HomePage', 'width' => '200px', 'edit' => ['type' => 'ValidationTextBox']],
+                        ['caption' => 'Screensaver after', 'name' => 'SaverMinutes', 'width' => '180px', 'edit' => $minutes],
+                        ['caption' => 'Screensaver shows', 'name' => 'SaverMode', 'width' => '160px', 'edit' => ['type' => 'Select', 'options' => [
+                            ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock']]]],
+                        ['caption' => 'ID', 'name' => 'Id', 'width' => '0px', 'visible' => false],
+                    ],
+                    'values'   => $rows,
+                ],
+            ],
+        ];
     }
 
     /** @return list<array<string,mixed>> eine Zeile je Gerät und angedocktem Modul */

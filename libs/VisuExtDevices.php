@@ -86,6 +86,40 @@ trait VisuExtDevices
         return (bool) $found;
     }
 
+    /**
+     * Bildschirmschoner: Nach $Minutes ohne Bedienung (0 = aus) legt sich auf diesem Gerät eine Ebene
+     * über die Visualisierung, $Mode „black“ (schwarz) oder „clock“ (Uhr mit Datum). Die erste
+     * Berührung weckt nur auf. Wirkt sofort.
+     */
+    public function SetScreensaver(string $DeviceID, int $Minutes, string $Mode): bool
+    {
+        $found = $this->locked(function () use ($DeviceID, $Minutes, $Mode): bool {
+            $devices = $this->devices();
+            if (!isset($devices[$DeviceID])) {
+                return false;
+            }
+            $devices[$DeviceID]['saver'] = VisuExtCore::cleanSaver($Minutes, $Mode);
+            $this->saveDevices($devices);
+            return true;
+        });
+        if ($found) {
+            $this->sendConfig($DeviceID);
+        }
+        return (bool) $found;
+    }
+
+    /** Weckt ein Gerät aus dem Bildschirmschoner ('' = alle). Liefert die Zahl der Verbindungen. */
+    public function Wake(string $DeviceID): int
+    {
+        return $this->sendSaver($DeviceID, false);
+    }
+
+    /** Schaltet den Bildschirmschoner auf einem Gerät sofort ein ('' = alle), auch wenn er dort nicht eingestellt ist. */
+    public function StartScreensaver(string $DeviceID): int
+    {
+        return $this->sendSaver($DeviceID, true);
+    }
+
     /** Legt fest, ob ein angedocktes Modul auf einem Gerät läuft (Vorgabe: jedes Modul auf jedem Gerät). */
     public function SetModuleAllowed(string $DeviceID, int $ModuleInstanceID, bool $Allowed): bool
     {
@@ -104,7 +138,7 @@ trait VisuExtDevices
         });
     }
 
-    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}. Ohne Schlüssel. */
+    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode}. Ohne Schlüssel. */
     public function GetDevices(): string
     {
         return (string) json_encode($this->deviceList(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -203,6 +237,7 @@ trait VisuExtDevices
                 'seen'    => isset($online[$id]) ? $online[$id]['t'] : (int) ($device['seen'] ?? 0),
                 'page'    => isset($online[$id]) ? $online[$id]['page'] : '',
                 'home'    => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
+                'saver'   => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? ''),
             ];
         }
         return $list;

@@ -45,6 +45,7 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 
 - **Geräte:** jeder verbundene Browser mit Name, Zustand, zuletzt gesehen und aktueller Seite. Umbenennen, sperren, entfernen.
 - **Zurück zur Startseite:** je Gerät einstellbar. Nach den eingestellten Minuten ohne Bedienung wechselt die Visualisierung dort zurück auf ihre Startseite, zum Beispiel an einem Wandtablett.
+- **Bildschirmschoner:** je Gerät einstellbar, schwarz oder mit Uhr. Die erste Berührung weckt nur auf; aus Symcon lässt er sich einschalten und aufwecken (`VISUEXT_StartScreensaver`, `VISUEXT_Wake`), etwa über einen Bewegungsmelder.
 - **Angedockte Module** und, sobald es mehrere gibt, welches Modul auf welchem Gerät läuft (Vorgabe: jedes auf jedem).
 - Die Variable „Verbundene Geräte“ gibt es immer, auf Wunsch je Gerät eine Variable „online“.
 

@@ -13,6 +13,18 @@ const pruefe = (name, ist, soll) => {
   if (a !== b) { fehler++; console.log(`FEHL ${name}\n     ist:  ${a}\n     soll: ${b}`); } else console.log(`OK   ${name}`);
 };
 
+/** Nachgestelltes Element: Kinder, Stil, Text und Horcher, so viel der Bildschirmschoner braucht. */
+function element() {
+  const el = { style: {}, children: [], attrs: {}, horcher: {}, textContent: '', parent: null,
+    appendChild(k) { el.children.push(k); k.parent = el; return k; },
+    remove() { if (el.parent) { el.parent.children = el.parent.children.filter((k) => k !== el); el.parent = null; } },
+    setAttribute(n, v) { el.attrs[n] = v; },
+    addEventListener(n, f) { el.horcher[n] = f; },
+    get firstChild() { return el.children[0] || null; },
+    get lastChild() { return el.children[el.children.length - 1] || null; } };
+  return el;
+}
+
 /** Fenster mit stellbarer Uhr; `sockets` sind alle geöffneten Verbindungen in Reihenfolge. */
 function welt() {
   let jetzt = 1_000_000, lauf = 0;
@@ -29,13 +41,13 @@ function welt() {
   const win = {
     WebSocket: Socket,
     location: { origin: 'http://symcon.test:3777', pathname: '/', hash: '#/kueche', assign: (ziel) => { gewechselt.push(ziel); } },
-    document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); } },
+    document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); }, body: element(), createElement: () => element() },
     addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); },
     setTimeout: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms }); return lauf; },
     setInterval: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms, alle: ms }); return lauf; },
     clearTimeout: (id) => timer.delete(id),
     clearInterval: (id) => timer.delete(id),
-    Date: { now: () => jetzt },
+    Date: class { static now() { return jetzt; } toLocaleTimeString() { return 'ZEIT'; } toLocaleDateString() { return 'DATUM'; } },
     JSON, Number, String, Array, Math, Error,
   };
   win.window = win; win.top = win;
@@ -54,7 +66,7 @@ function welt() {
     }
     jetzt = ziel;
   };
-  const melde = (n) => (horcher[n] || []).forEach((f) => f());
+  const melde = (n) => (horcher[n] || []).forEach((f) => f({ type: n }));
   return { win, sockets, lade, vor, melde, gewechselt };
 }
 
@@ -203,6 +215,54 @@ function welt() {
   win.location.hash = '#/flur';
   vor(3600000);
   pruefe('Ohne Einstellung kein Rücksprung', win.location.hash, '#/flur');
+}
+
+// ── Bildschirmschoner ──
+{
+  const { win, sockets, lade, vor, melde } = welt();
+  lade({ home: { minutes: 1, page: '' }, saver: { minutes: 3, mode: 'clock' } });
+  const ebene = () => win.document.body.children.find((k) => k.attrs['data-visuext'] === 'saver') || null;
+  const uhr = () => { const e = ebene(); return e ? [e.firstChild.style.display, e.firstChild.firstChild.textContent, e.firstChild.lastChild.textContent] : null; };
+  win.location.hash = '#/flur';
+  melde('pointerdown');
+  vor(179000);
+  pruefe('Bildschirmschoner: vor Ablauf nichts; der Rücksprung lief schon', [ebene(), win.location.hash], [null, '#/kueche']);
+  vor(1500);
+  pruefe('Nach drei Minuten ohne Bedienung: Ebene über allem, mit Uhr und Datum', [ebene().style.cssText.includes('z-index:2147483647'), uhr()], [true, ['block', 'ZEIT', 'DATUM']]);
+  const ort = [ebene().firstChild.style.left, ebene().firstChild.style.top];
+  let gewandert = false;
+  for (let i = 0; i < 10 && !gewandert; i++) { vor(60000); gewandert = ebene().firstChild.style.left !== ort[0] || ebene().firstChild.style.top !== ort[1]; }
+  pruefe('Die Uhr wandert, damit sich nichts einbrennt', gewandert, true);
+  melde('pointerdown');
+  melde('touchstart');
+  pruefe('Aufsetzen von Zeiger oder Finger lässt die Ebene stehen (die Geste soll nicht in die Visu fallen)', ebene() !== null, true);
+  ebene().horcher.click();
+  pruefe('Ende der Geste auf der Ebene: aufgewacht', ebene(), null);
+  vor(181000);
+  pruefe('Danach läuft die Frist neu', ebene() !== null, true);
+  melde('keydown');
+  pruefe('Eine Taste weckt sofort', ebene(), null);
+
+  const s = sockets[0];
+  s.oeffne();
+  s.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  s.empfange({ t: 'saver', on: true });
+  pruefe('Aus Symcon einschalten: sofort', ebene() !== null, true);
+  s.empfange({ t: 'cfg', home: { minutes: 1, page: '' }, saver: { minutes: 3, mode: 'black' } });
+  pruefe('Inhalt im Betrieb umgestellt: schwarz, ohne Uhr', uhr()[0], 'none');
+  s.empfange({ t: 'saver', on: false });
+  pruefe('Aus Symcon aufwecken', ebene(), null);
+  s.empfange({ t: 'saver', on: true });
+  win.visuExt.wake();
+  pruefe('Ein Modul weckt über ext.wake()', ebene(), null);
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 0, mode: 'black' } });
+  s.empfange({ t: 'saver', on: true });
+  s.empfange({ t: 'saver', on: true });
+  pruefe('Einschalten aus Symcon geht auch ohne Einstellung, und nur eine Ebene', win.document.body.children.length, 1);
+  win.visuExt.wake();
+  melde('pointerdown');
+  vor(7200000);
+  pruefe('Ausgeschaltet: kein Bildschirmschoner von selbst', ebene(), null);
 }
 
 console.log(fehler ? `\n${fehler} von ${anzahl} Prüfungen fehlgeschlagen` : `\nAlle ${anzahl} Prüfungen bestanden.`);

@@ -194,10 +194,10 @@ $a->script = 'window.__probe = /*CONFIG*/null;';
 $kanal = VisuExtCore::channelToken($id, hash('sha256', $key));
 check($x->ws(['t' => 'hello', 'd' => $id, 'c' => 'falsch'], 5001) === [['t' => 'denied']] && $x->sess() === [], 'Anmeldung mit falschem Wert: abgewiesen');
 check($x->ws(['t' => 'beat'], 5001) === [['t' => 'unknown']], 'Lebenszeichen ohne Anmeldung: „unbekannt“');
-check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/kueche'], 5001) === [['t' => 'welcome', 'name' => 'Küche', 'beat' => 30], ['t' => 'cfg', 'home' => ['minutes' => 0, 'page' => '']]]
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/kueche'], 5001) === [['t' => 'welcome', 'name' => 'Küche', 'beat' => 30], ['t' => 'cfg', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black']]]
     && $x->values['Connected'] === 1 && $x->timers['Sweep'] === 30000, 'Anmeldung: willkommen, Gerät zählt als verbunden, Aufräum-Timer läuft');
 $liste = json_decode($x->GetDevices(), true);
-check($liste[0] === ['id' => $id, 'name' => 'Küche', 'online' => true, 'blocked' => false, 'seen' => $x->clock, 'page' => '/#/kueche', 'home' => ['minutes' => 0, 'page' => '']] && !str_contains($x->GetDevices(), 'secret'),
+check($liste[0] === ['id' => $id, 'name' => 'Küche', 'online' => true, 'blocked' => false, 'seen' => $x->clock, 'page' => '/#/kueche', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black']] && !str_contains($x->GetDevices(), 'secret'),
     'Geräteliste: online mit Seite, ohne Geheimnis');
 $x->clock += 30;
 check($x->ws(['t' => 'beat', 'page' => '/#/flur'], 5001) === [['t' => 'beat']] && $x->sess()['127.0.0.1|5001']['page'] === '/#/flur', 'Lebenszeichen: beantwortet, Seite nachgeführt');
@@ -275,14 +275,28 @@ check(VisuExtCore::cleanHome(5, '/#/12345') === ['minutes' => 5, 'page' => '/#/1
 $x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/flur'], 5004, 'k4');
 $von = count($pushes);
 check($x->SetReturnHome($id, 5, '/#/start') && $x->devs()[$id]['home'] === ['minutes' => 5, 'page' => '/#/start'] && !$x->SetReturnHome('nixnixni', 5, ''), 'Rücksprung: gespeichert; unbekanntes Gerät: false');
-check(array_slice($pushes, $von) === [['/hook/visuext', ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start']], '127.0.0.1', 5004]], 'Rücksprung: die offene Visualisierung des Geräts bekommt die Einstellung sofort, sonst niemand');
+check(array_slice($pushes, $von) === [['/hook/visuext', ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black']], '127.0.0.1', 5004]], 'Rücksprung: die offene Visualisierung des Geräts bekommt die Einstellung sofort, sonst niemand');
 $e = $x->clock + 60;
 [, $laufzeit] = $x->http(['k' => 'script', 'd' => $id, 'm' => '0', 'e' => (string) $e, 's' => VisuExtCore::ticket($id, $x->devs()[$id]['secret'], 0, $e)]);
 check(str_contains($laufzeit, '"home":{"minutes":5,"page":"/#/start"}'), 'Rücksprung: die Laufzeit trägt die Einstellung schon beim Laden');
-check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start']], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
-$zeile = array_values(array_filter(json_decode($x->GetConfigurationForm(), true)['actions'], static fn (array $a): bool => ($a['name'] ?? '') === 'Devices'))[0];
-check(in_array('HomeMinutes', array_column($zeile['columns'], 'name'), true) && $zeile['values'][0]['HomeMinutes'] === 5 && $zeile['values'][0]['HomePage'] === '/#/start'
-    && str_contains($zeile['onEdit'], 'VISUEXT_SetReturnHome'), 'Rücksprung: im Formular je Gerät einstellbar');
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black']], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
+$bereich = array_values(array_filter(json_decode($x->GetConfigurationForm(), true)['actions'], static fn (array $a): bool => ($a['type'] ?? '') === 'ExpansionPanel'))[0];
+$zeile = array_values(array_filter($bereich['items'], static fn (array $a): bool => ($a['name'] ?? '') === 'Kiosk'))[0];
+check($zeile['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'HomeMinutes' => 5, 'HomePage' => '/#/start', 'SaverMinutes' => 0, 'SaverMode' => 'black']
+    && str_contains($zeile['onEdit'], 'VISUEXT_SetReturnHome') && str_contains($zeile['onEdit'], 'VISUEXT_SetScreensaver'), 'Rücksprung und Bildschirmschoner: eigener Aufklappbereich, je Gerät einstellbar');
+
+// ── Bildschirmschoner ──
+check(VisuExtCore::cleanSaver(10, 'clock') === ['minutes' => 10, 'mode' => 'clock'] && VisuExtCore::cleanSaver(-1, 'disco') === ['minutes' => 0, 'mode' => 'black']
+    && VisuExtCore::cleanSaver('5000', null) === ['minutes' => 1440, 'mode' => 'black'], 'Bildschirmschoner: Minuten begrenzt, unbekannter Inhalt wird schwarz');
+$von = count($pushes);
+check($x->SetScreensaver($id, 10, 'clock') && $x->devs()[$id]['saver'] === ['minutes' => 10, 'mode' => 'clock'] && !$x->SetScreensaver('nixnixni', 1, 'black'), 'Bildschirmschoner: gespeichert; unbekanntes Gerät: false');
+check(array_column(array_slice($pushes, $von), 1) === array_fill(0, 2, ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 10, 'mode' => 'clock']]),
+    'Bildschirmschoner: beide offenen Verbindungen des Geräts bekommen die Einstellung sofort');
+$von = count($pushes);
+check($x->StartScreensaver($id) === 2 && $x->Wake('') === 2 && $x->Wake('nixnixni') === 0
+    && array_column(array_slice($pushes, $von), 1) === [['t' => 'saver', 'on' => true], ['t' => 'saver', 'on' => true], ['t' => 'saver', 'on' => false], ['t' => 'saver', 'on' => false]],
+    'Einschalten und Aufwecken aus Symcon: an ein Gerät oder an alle, Rückgabe zählt die Verbindungen');
+check($x->SetScreensaver($id, 0, 'black'), 'Bildschirmschoner wieder aus');
 check(json_decode($x->GetDevices(), true)[0]['home'] === ['minutes' => 5, 'page' => '/#/start'] && $x->SetReturnHome($id, 0, ''), 'Rücksprung: in GetDevices sichtbar, wieder ausschaltbar');
 check($x->RemoveDevice($id2) && !isset($x->devs()[$id2]) && !isset($x->variables['Online_' . $id2]) && isset($x->variables['Online_' . $id]) && !$x->RemoveDevice($id2),
     'Entfernen: Gerät und seine Variable weg');
@@ -303,7 +317,7 @@ $liste = static function (array $form, string $name): array {
 $geraete = $liste($form, 'Devices');
 $module = $liste($form, 'Modules');
 $rechte = $liste($form, 'Permissions');
-check($geraete === [['Id' => $id, 'Name' => 'Küche neu', 'State' => 'online', 'Seen' => date('d.m.Y H:i', $x->clock), 'Page' => '/#/flur', 'HomeMinutes' => 0, 'HomePage' => '', 'Blocked' => false]], 'Formular: Geräteliste (seit der Rücksprung-Probe wieder verbunden): ' . json_encode($geraete, JSON_UNESCAPED_UNICODE));
+check($geraete === [['Id' => $id, 'Name' => 'Küche neu', 'State' => 'online', 'Seen' => date('d.m.Y H:i', $x->clock), 'Page' => '/#/flur', 'Blocked' => false]], 'Formular: Geräteliste (seit der Rücksprung-Probe wieder verbunden): ' . json_encode($geraete, JSON_UNESCAPED_UNICODE));
 check(array_column($module, 'Instance') === ['#30001', '#30002'] && $module[0]['State'] === 'active', 'Formular: angedockte Module');
 check(count($rechte) === 2 && $rechte[0] === ['Device' => 'Küche neu', 'Module' => 'Probe 30001', 'Active' => true, 'DeviceId' => $id, 'ModuleId' => 30001], 'Formular: je Gerät und Modul eine Zeile');
 $a->parent = 0;

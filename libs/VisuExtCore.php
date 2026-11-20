@@ -106,6 +106,19 @@ final class VisuExtCore
         return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)), 'page' => $page];
     }
 
+    /** Inhalte des Bildschirmschoners: schwarz oder Uhr mit Datum. */
+    public const SAVER_MODES = ['black', 'clock'];
+
+    /**
+     * Bildschirmschoner eines Geräts: Minuten ohne Bedienung (0 = aus, höchstens ein Tag) und Inhalt.
+     * @return array{minutes:int,mode:string}
+     */
+    public static function cleanSaver(mixed $minutes, mixed $mode): array
+    {
+        return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)),
+            'mode' => in_array($mode, self::SAVER_MODES, true) ? $mode : self::SAVER_MODES[0]];
+    }
+
     /**
      * Antwort eines angedockten Moduls auf „Describe“ prüfen.
      * @return array{instance:int,name:string,version:string,active:bool,info:string}|null

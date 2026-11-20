@@ -67,6 +67,7 @@ Den Kanal zu Symcon stellt die Laufzeit `window.visuExt` bereit. Sie ist das ers
 | `ext.send(instanz, daten)` | Schickt `daten` an das Modul. Ohne Kanal wartet die Nachricht (höchstens 50) und die Rückgabe ist `false`. |
 | `ext.on(instanz, fn)` | Empfänger für Nachrichten des Moduls; die Rückgabe meldet ihn wieder ab |
 | `ext.onState(fn)` | `fn(true/false)` bei jedem Wechsel; sofort, falls der Kanal schon steht |
+| `ext.wake()` | Weckt das Gerät aus dem Bildschirmschoner der Visu-Erweiterung, bevor das Skript etwas Wichtiges zeigt |
 
 `INSTANZ` ist die Instanz-ID des eigenen Moduls; das Modul setzt sie beim Ausliefern in das Skript ein.
 

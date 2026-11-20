@@ -199,7 +199,10 @@ trait VisuExtChannel
     /** Einstellungen, die die Laufzeit auf dem Gerät anwendet (im Skript und als Nachricht „cfg“). */
     private function deviceConfig(array $device): array
     {
-        return ['home' => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? '')];
+        return [
+            'home'  => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
+            'saver' => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? ''),
+        ];
     }
 
     /** Schickt einem Gerät seine Einstellungen auf allen offenen Verbindungen. */
@@ -214,6 +217,22 @@ trait VisuExtChannel
                 $this->push((string) $session['a'], (int) $session['p'], ['t' => 'cfg'] + $this->deviceConfig($device));
             }
         }
+    }
+
+    /** Bildschirmschoner auf einem Gerät ('' = alle) ein- oder ausschalten; liefert die Zahl der Verbindungen. */
+    private function sendSaver(string $deviceId, bool $on): int
+    {
+        $devices = $this->devices();
+        $sent = 0;
+        foreach ($this->sessions() as $session) {
+            $id = (string) $session['d'];
+            if (($deviceId !== '' && $id !== $deviceId) || !is_array($devices[$id] ?? null) || !empty($devices[$id]['blocked'])) {
+                continue;
+            }
+            $this->push((string) $session['a'], (int) $session['p'], ['t' => 'saver', 'on' => $on]);
+            $sent++;
+        }
+        return $sent;
     }
 
     private function push(string $addr, int $port, array $msg): void
