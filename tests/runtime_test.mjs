@@ -30,7 +30,7 @@ function element(tag = 'div', merke = null) {
 /** Fenster mit stellbarer Uhr; `sockets` sind alle geöffneten Verbindungen in Reihenfolge. */
 function welt() {
   let jetzt = 1_000_000, lauf = 0;
-  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [], erzeugt = [];
+  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [], erzeugt = [], abrufe = [], antworten = [], blobs = [], frei = [];
   class Socket {
     constructor(url) { this.url = url; this.gesendet = []; this.zu = false; sockets.push(this); }
     send(text) { if (this.zu) throw new Error('zu'); this.gesendet.push(JSON.parse(text)); }
@@ -51,6 +51,16 @@ function welt() {
     clearInterval: (id) => timer.delete(id),
     Date: class { static now() { return jetzt; } toLocaleTimeString() { return 'ZEIT'; } toLocaleDateString() { return 'DATUM'; } },
     JSON, Number, String, Array, Math, Error, Boolean, encodeURIComponent,
+    // Abruf eines Bildstücks: `antworten` hält je Abruf {status, size, type, bytes}
+    fetch: (url) => {
+      abrufe.push(url);
+      const a = antworten.shift();
+      if (!a) return Promise.reject(new Error('netz'));
+      return Promise.resolve({ ok: (a.status || 200) === 200, headers: { get: (n) => ({ 'X-Visu-Size': String(a.size), 'Content-Type': a.type })[n] ?? null },
+        arrayBuffer: () => Promise.resolve({ byteLength: a.bytes }) });
+    },
+    Blob: class { constructor(teile, o) { this.teile = teile.map((t) => t.byteLength); this.type = o.type; blobs.push(this); } },
+    URL: { createObjectURL: () => 'blob:' + blobs.length, revokeObjectURL: (u) => frei.push(u) },
   };
   win.window = win; win.top = win;
   const ctx = vm.createContext(win);
@@ -69,7 +79,7 @@ function welt() {
     jetzt = ziel;
   };
   const melde = (n) => (horcher[n] || []).forEach((f) => f({ type: n }));
-  return { win, sockets, lade, vor, melde, gewechselt, erzeugt };
+  return { win, sockets, lade, vor, melde, gewechselt, erzeugt, abrufe, antworten, blobs, frei };
 }
 
 // ── Start, Warteliste, Anmeldung ──
@@ -323,6 +333,82 @@ function welt() {
   lade({ saver: { minutes: 1, mode: 'art', interval: 5, fill: false } });
   vor(61000);
   pruefe('Ohne Liste der Kunstwerke: die Uhr statt einer leeren Fläche', [erzeugt.filter((e) => e.tag === 'img').length, win.document.body.children[0].firstChild.style.display], [0, 'block']);
+}
+
+// ── Bildschirmschoner mit eigenen Bildern aus Symcon ──
+{
+  const { win, sockets, lade, vor, erzeugt, abrufe, antworten, blobs, frei } = welt();
+  const warte = () => new Promise((r) => setImmediate(r));
+  const MEDIA = { minutes: 1, mode: 'media', interval: 2, fill: true, category: 40000 };
+  lade({ saver: MEDIA });
+  const ebene = () => win.document.body.children.find((k) => k.attrs['data-visuext'] === 'saver') || null;
+  const bilder = () => erzeugt.filter((e) => e.tag === 'img');
+  const imBild = () => ebene().children.filter((k) => k.tag === 'img');
+  const s = sockets[0];
+  vor(61000);
+  pruefe('Eigene Bilder ohne Kanal: die Uhr', [ebene().firstChild.style.display, abrufe.length], ['block', 0]);
+  const senden = s.send.bind(s);
+  s.send = (text) => { senden(text); if (JSON.parse(text).t === 'beat') s.empfange({ t: 'beat' }); }; // Symcon antwortet auf das Lebenszeichen
+  s.oeffne();
+  s.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  const fragen = () => s.gesendet.filter((m) => m.t === 'pic');
+  pruefe('Sobald der Kanal steht: die Laufzeit fragt Symcon nach dem nächsten Bild', fragen(), [{ t: 'pic', seen: [] }]);
+  antworten.push({ size: 5, type: 'image/jpeg', bytes: 3 }, { size: 5, type: 'image/jpeg', bytes: 2 });
+  s.empfange({ t: 'pic', i: 40001, reset: false, u: '/hook/visuext?k=media&d=ab12cd34&i=40001&e=1&s=x' });
+  await warte(); await warte();
+  pruefe('Das Bild kommt in Stücken vom Hook, jedes ab dem bisher Geladenen', abrufe, ['/hook/visuext?k=media&d=ab12cd34&i=40001&e=1&s=x&o=0', '/hook/visuext?k=media&d=ab12cd34&i=40001&e=1&s=x&o=3']);
+  pruefe('und wird zu einem Bild zusammengesetzt', [blobs.length, blobs[0].teile, blobs[0].type, bilder()[0].src], [1, [3, 2], 'image/jpeg', 'blob:1']);
+  bilder()[0].onload();
+  vor(100);
+  pruefe('Geladen: eingeblendet, bildschirmfüllend, ohne Beschriftung, die Uhr ist weg',
+    [imBild().length, bilder()[0].style.opacity, bilder()[0].style.cssText.includes('object-fit:cover'), ebene().lastChild.style.display, ebene().firstChild.style.display], [1, '1', true, 'none', 'none']);
+  vor(120000);
+  pruefe('Beim Wechsel nennt die Laufzeit, was sie schon gezeigt hat', fragen()[1], { t: 'pic', seen: [40001] });
+  antworten.push({ size: 4, type: 'image/png', bytes: 4 });
+  s.empfange({ t: 'pic', i: 40002, reset: true, u: '/hook/visuext?k=media&i=40002' });
+  await warte(); await warte();
+  bilder()[1].onload();
+  vor(2000);
+  pruefe('Überblendet: nur das neue Bild, der Speicher des alten ist frei', [imBild().length, imBild()[0].src, frei], [1, 'blob:2', ['blob:1']]);
+  vor(120000);
+  pruefe('Neue Runde: die Liste des Gezeigten beginnt neu', fragen()[2], { t: 'pic', seen: [40002] });
+  s.empfange({ t: 'pic' });
+  s.empfange({ t: 'pic', i: 9, u: 'https://fremd.example/bild.jpg' });
+  s.empfange({ t: 'pic', i: 9, u: '/hook/anderes?k=media' });
+  await warte();
+  pruefe('Kein Bild oder eine fremde Adresse: nichts wird geladen, das gezeigte bleibt, keine Uhr', [abrufe.length, imBild()[0].src, ebene().firstChild.style.display], [3, 'blob:2', 'none']);
+  antworten.push({ status: 403, size: 0, type: '', bytes: 0 });
+  s.empfange({ t: 'pic', i: 40003, u: '/hook/visuext?k=media&i=40003' });
+  await warte(); await warte();
+  pruefe('Der Hook lehnt ab: das gezeigte Bild bleibt', [abrufe.length, imBild().length, blobs.length], [4, 1, 2]);
+
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { ...MEDIA, category: 41000 } });
+  pruefe('Andere Kategorie im Betrieb: das alte Bild verschwindet, sofort wird neu gefragt', [imBild().length, frei, fragen().length, fragen()[3]], [0, ['blob:1', 'blob:2'], 4, { t: 'pic', seen: [] }]);
+  antworten.push({ size: 2, type: 'image/jpeg', bytes: 2 });
+  s.empfange({ t: 'pic', i: 41001, u: '/hook/visuext?k=media&i=41001' });
+  ebene().horcher.click();
+  await warte(); await warte();
+  pruefe('Aufgeweckt, während ein Bild lädt: es wird verworfen', [ebene(), blobs.length, bilder().length], [null, 2, 2]);
+  s.empfange({ t: 'pic', i: 41002, u: '/hook/visuext?k=media&i=41002' });
+  await warte();
+  pruefe('Eine späte Antwort ohne Bildschirmschoner lädt nichts', abrufe.length, 5);
+  s.empfange({ t: 'saver', on: true });
+  s.reisse();
+  vor(120000);
+  pruefe('Kanal abgerissen und noch kein Bild: die Uhr', ebene().firstChild.style.display, 'block');
+}
+{
+  const { win, sockets, lade, vor, antworten, erzeugt } = welt();
+  lade({ saver: { minutes: 1, mode: 'media', interval: 5, fill: false, category: 1 } });
+  sockets[0].oeffne();
+  sockets[0].empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  vor(61000);
+  sockets[0].empfange({ t: 'pic' });
+  pruefe('Leere Kategorie: die Uhr statt einer leeren Fläche', [erzeugt.filter((e) => e.tag === 'img').length, win.document.body.children[0].firstChild.style.display], [0, 'block']);
+  antworten.push({ size: 9, type: 'text/html', bytes: 9 });
+  sockets[0].empfange({ t: 'pic', i: 2, u: '/hook/visuext?k=media&i=2' });
+  await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r));
+  pruefe('Was kein Bild ist, wird nicht gezeigt', erzeugt.filter((e) => e.tag === 'img').length, 0);
 }
 
 console.log(fehler ? `\n${fehler} von ${anzahl} Prüfungen fehlgeschlagen` : `\nAlle ${anzahl} Prüfungen bestanden.`);

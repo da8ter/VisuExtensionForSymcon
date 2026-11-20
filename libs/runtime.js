@@ -20,8 +20,10 @@
  * Visualisierung führt ihre Seite im Adress-Anhang (#/…); gewechselt wird über diesen Anhang.
  *
  * Und der Bildschirmschoner (C.saver, „cfg“, „saver“): eine Ebene über der ganzen Visualisierung,
- * schwarz, mit Uhr oder mit Kunstwerken im Wechsel (C.art: gemeinfreie Gemälde, die Bilder lädt der
- * Browser direkt bei Wikimedia Commons). Eigene Elemente am body liegen über der Visualisierung und fangen Zeiger ab
+ * schwarz, mit Uhr, mit Kunstwerken im Wechsel (C.art: gemeinfreie Gemälde, die Bilder lädt der
+ * Browser direkt bei Wikimedia Commons) oder mit eigenen Bildern aus Symcon (Medienobjekte einer
+ * Kategorie: die Laufzeit fragt mit „pic“ nach dem nächsten, Symcon wählt zufällig und nennt eine
+ * kurz gültige Adresse am Hook; geladen wird in Stücken, weil Symcon die Ausgabe eines Hooks begrenzt). Eigene Elemente am body liegen über der Visualisierung und fangen Zeiger ab
  * (gemessen 10.11.2026): Die erste Berührung weckt deshalb nur auf und löst in der Visu nichts aus.
  * Abschalten oder dimmen kann eine Seite das Display nicht, nur abdunkeln.
  */
@@ -49,6 +51,7 @@
     if (open === value) return;
     open = value;
     stateHandlers.slice().forEach(function (fn) { call(fn, value); });
+    if (value && saverLayer && saver.mode === 'media' && !artShown) nextArt(); // eigene Bilder brauchen den Kanal: jetzt nachholen
   }
 
   function lost() {
@@ -95,6 +98,9 @@
         break;
       case 'saver': // aus Symcon: sofort einschalten oder aufwecken
         if (m.on === true) startSaver(); else wakeSaver();
+        break;
+      case 'pic': // das nächste eigene Bild für den Bildschirmschoner
+        gotPicture(m);
         break;
       case 'msg':
         (handlers[String(m.m)] || []).slice().forEach(function (fn) { call(fn, m.data); });
@@ -185,8 +191,9 @@
   }
 
   // ── Bildschirmschoner ──
-  var saver = { ms: 0, mode: 'black', interval: 300000, fill: false }, saverTimer = null, saverLayer = null, saverTick = null;
+  var saver = { ms: 0, mode: 'black', interval: 300000, fill: false, category: 0 }, saverTimer = null, saverLayer = null, saverTick = null;
   var art = Array.isArray(C.art) ? C.art.slice() : [], artIndex = -1, artTimer = null, artShown = null, artFailed = false;
+  var seen = [], picRun = 0; // eigene Bilder: in dieser Runde gezeigte Medienobjekte; laufende Anfrage
 
   function armSaver() {
     if (saverTimer) { clearTimeout(saverTimer); saverTimer = null; }
@@ -196,21 +203,27 @@
     var minutes = s && typeof s.minutes === 'number' && s.minutes > 0 ? Math.min(s.minutes, 1440) : 0;
     var next = {
       ms: minutes * 60000,
-      mode: s && (s.mode === 'clock' || s.mode === 'art') ? s.mode : 'black',
+      mode: s && (s.mode === 'clock' || s.mode === 'art' || s.mode === 'media') ? s.mode : 'black',
       interval: (s && typeof s.interval === 'number' && s.interval >= 1 ? Math.min(s.interval, 60) : 5) * 60000,
-      fill: !!(s && s.fill === true)
+      fill: !!(s && s.fill === true),
+      category: s && typeof s.category === 'number' ? s.category : 0
     };
-    if (saver.ms === next.ms && saver.mode === next.mode && saver.interval === next.interval && saver.fill === next.fill) return;
+    var source = saver.mode !== next.mode || saver.category !== next.category; // andere Bilder als bisher
+    if (!source && saver.ms === next.ms && saver.interval === next.interval && saver.fill === next.fill) return;
     saver = next;
+    if (source) { picRun++; seen = []; artFailed = false; if (artShown) { dropImage(artShown); artShown = null; } }
     if (saverLayer) showSaver(); // läuft er gerade, nur den Inhalt wechseln
     else armSaver();
   }
-  /* Uhr und Datum; alle Minute neu und an anderer Stelle, damit sich nichts einbrennt. Kunstwerke
-     zeigen die Uhr nur, wenn sich kein Bild laden ließ (kein Netz). */
+  function imageMode() {
+    return saver.mode === 'media' || (saver.mode === 'art' && art.length > 0);
+  }
+  /* Uhr und Datum; alle Minute neu und an anderer Stelle, damit sich nichts einbrennt. Bilder
+     zeigen die Uhr nur, wenn sich keines laden ließ (kein Netz, leere Kategorie). */
   function drawSaver() {
     if (!saverLayer) return;
     var box = saverLayer.firstChild;
-    if (saver.mode === 'black' || (saver.mode === 'art' && art.length && !artFailed)) { box.style.display = 'none'; return; }
+    if (saver.mode === 'black' || (imageMode() && !artFailed)) { box.style.display = 'none'; return; }
     var now = new Date();
     box.style.display = 'block';
     box.firstChild.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -236,45 +249,87 @@
   function artImageStyle() {
     return 'position:absolute;left:0;top:0;width:100%;height:100%;object-fit:' + (saver.fill ? 'cover' : 'contain') + ';opacity:0;transition:opacity 1.5s ease;';
   }
-  function nextArt() {
-    if (!saverLayer || saver.mode !== 'art' || !art.length) return;
-    if (artIndex < 0 || artIndex >= art.length - 1) { // neu mischen
-      for (var i = art.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = art[i]; art[i] = art[j]; art[j] = t; }
-      artIndex = -1;
-    }
-    var work = art[++artIndex], layer = saverLayer, img = document.createElement('img');
+  function dropImage(img) {
+    img.remove();
+    if (img.blobUrl) { try { w.URL.revokeObjectURL(img.blobUrl); } catch (e) { /* schon frei */ } }
+  }
+  function imageFailed() {
+    if (saverLayer && !artShown) { artFailed = true; drawSaver(); } // noch kein Bild: die Uhr zeigen
+  }
+  /* Lädt ein Bild und blendet es ein, sobald es da ist; blobUrl gibt den Speicher eines eigenen Bildes wieder frei. */
+  function showImage(src, text, blobUrl) {
+    var layer = saverLayer, mode = saver.mode, img = document.createElement('img');
     img.alt = '';
+    img.blobUrl = blobUrl || '';
     img.style.cssText = artImageStyle();
     img.onload = function () {
       img.onload = img.onerror = null;
-      if (layer !== saverLayer || saver.mode !== 'art') return;
+      if (layer !== saverLayer || saver.mode !== mode) { dropImage(img); return; }
       var old = artShown, caption = layer.lastChild;
       layer.insertBefore(img, caption);
       artShown = img;
       artFailed = false;
-      caption.textContent = [work.title, work.artist, work.year].filter(Boolean).join(' · ');
-      caption.style.display = 'block';
+      caption.textContent = text;
+      caption.style.display = text ? 'block' : 'none';
       drawSaver();
-      setTimeout(function () { img.style.opacity = '1'; if (old) { old.style.opacity = '0'; setTimeout(function () { old.remove(); }, 1600); } }, 30);
+      setTimeout(function () { img.style.opacity = '1'; if (old) { old.style.opacity = '0'; setTimeout(function () { dropImage(old); }, 1600); } }, 30);
     };
     img.onerror = function () {
       img.onload = img.onerror = null;
-      if (layer !== saverLayer) return;
-      if (!artShown) { artFailed = true; drawSaver(); } // noch kein Bild: die Uhr zeigen
+      dropImage(img);
+      if (layer === saverLayer) imageFailed();
     };
-    img.src = artUrl(work.file);
+    img.src = src;
+  }
+  function nextArt() {
+    if (!saverLayer || !imageMode()) return;
+    if (saver.mode === 'media') { // Symcon wählt; ohne Kanal gibt es kein Bild
+      picRun++;
+      if (!open || !raw({ t: 'pic', seen: seen.slice(-2000) })) imageFailed();
+      return;
+    }
+    if (artIndex < 0 || artIndex >= art.length - 1) { // neu mischen
+      for (var i = art.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = art[i]; art[i] = art[j]; art[j] = t; }
+      artIndex = -1;
+    }
+    var work = art[++artIndex];
+    showImage(artUrl(work.file), [work.title, work.artist, work.year].filter(Boolean).join(' · '), '');
+  }
+  /* Antwort auf „pic“: das Bild in Stücken vom Hook holen (X-Visu-Size nennt die ganze Größe). */
+  function gotPicture(m) {
+    if (!saverLayer || saver.mode !== 'media') return;
+    if (typeof m.u !== 'string' || m.u.indexOf(C.hook + '?') !== 0 || typeof w.fetch !== 'function') { imageFailed(); return; }
+    if (m.reset === true) seen = [];
+    if (typeof m.i === 'number') seen.push(m.i);
+    var run = ++picRun, parts = [], got = 0, type = '';
+    (function piece() {
+      w.fetch(m.u + '&o=' + got, { credentials: 'same-origin', cache: 'no-store' }).then(function (r) {
+        if (!r.ok) throw new Error('http');
+        var total = Number(r.headers.get('X-Visu-Size')) || 0;
+        type = type || r.headers.get('Content-Type') || '';
+        return r.arrayBuffer().then(function (buffer) {
+          if (run !== picRun) return; // überholt: aufgeweckt, umgestellt oder schon das nächste Bild
+          if (!buffer.byteLength || type.indexOf('image/') !== 0) throw new Error('leer');
+          parts.push(buffer);
+          got += buffer.byteLength;
+          if (got < total && parts.length < 200) { piece(); return; }
+          var url = w.URL.createObjectURL(new w.Blob(parts, { type: type }));
+          showImage(url, '', url);
+        });
+      }).catch(function () { if (run === picRun) imageFailed(); });
+    })();
   }
   /* Inhalt nach der Einstellung aufbauen; auch beim Umstellen im Betrieb. */
   function showSaver() {
     if (!saverLayer) return;
     if (artTimer) { clearInterval(artTimer); artTimer = null; }
     var caption = saverLayer.lastChild;
-    if (saver.mode === 'art' && art.length) {
+    if (imageMode()) {
       if (artShown) artShown.style.objectFit = saver.fill ? 'cover' : 'contain';
       else nextArt();
       artTimer = setInterval(nextArt, saver.interval);
     } else {
-      if (artShown) { artShown.remove(); artShown = null; }
+      if (artShown) { dropImage(artShown); artShown = null; }
       caption.style.display = 'none';
     }
     drawSaver();
@@ -306,7 +361,8 @@
   function wakeSaver() {
     if (saverTick) { clearInterval(saverTick); saverTick = null; }
     if (artTimer) { clearInterval(artTimer); artTimer = null; }
-    artShown = null;
+    picRun++;
+    if (artShown) { dropImage(artShown); artShown = null; }
     if (saverLayer) { saverLayer.remove(); saverLayer = null; }
     lastActivity = Date.now();
     armHome();

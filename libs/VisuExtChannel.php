@@ -11,10 +11,10 @@ declare(strict_types=1);
  * Verbindung als getrennt. Frames verschiedener Verbindungen laufen gleichzeitig: jede Änderung an
  * der Sitzungstabelle geschieht unter der Sperre.
  *
- * Nachrichten Gerät → Modul: {t:"hello", d, c, page} · {t:"beat", page} · {t:"ev", m, data}
+ * Nachrichten Gerät → Modul: {t:"hello", d, c, page} · {t:"beat", page} · {t:"ev", m, data} · {t:"pic", seen}
  * Nachrichten Modul → Gerät: {t:"welcome", name, beat} · {t:"denied"} · {t:"unknown"} · {t:"beat"} · {t:"msg", m, data}
  *
- * Braucht vom Modul: locked(), now(), devices(), saveDevices(), moduleAllowed(), moduleEvent(), HOOK.
+ * Braucht vom Modul: locked(), now(), devices(), saveDevices(), moduleAllowed(), moduleEvent(), picture(), HOOK.
  */
 trait VisuExtChannel
 {
@@ -50,6 +50,10 @@ trait VisuExtChannel
                 if ($reply !== null) {
                     $this->push($addr, $port, ['t' => 'msg', 'm' => $module, 'data' => $reply]);
                 }
+                return;
+            case 'pic': // Bildschirmschoner mit eigenen Bildern: das nächste Bild
+                [$state, $session, $device] = $this->checkSession($addr, $port, $wsKey, null);
+                $this->push($addr, $port, $state === 'ok' ? $this->picture((string) $session['d'], $device, $msg['seen'] ?? null) : ['t' => $state]);
                 return;
         }
     }
@@ -201,7 +205,7 @@ trait VisuExtChannel
     {
         return [
             'home'  => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
-            'saver' => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? '', $device['saver']['interval'] ?? 5, $device['saver']['fill'] ?? false),
+            'saver' => VisuExtCore::saverOf($device['saver'] ?? null),
         ];
     }
 

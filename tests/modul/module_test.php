@@ -194,10 +194,10 @@ $a->script = 'window.__probe = /*CONFIG*/null;';
 $kanal = VisuExtCore::channelToken($id, hash('sha256', $key));
 check($x->ws(['t' => 'hello', 'd' => $id, 'c' => 'falsch'], 5001) === [['t' => 'denied']] && $x->sess() === [], 'Anmeldung mit falschem Wert: abgewiesen');
 check($x->ws(['t' => 'beat'], 5001) === [['t' => 'unknown']], 'Lebenszeichen ohne Anmeldung: „unbekannt“');
-check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/kueche'], 5001) === [['t' => 'welcome', 'name' => 'Küche', 'beat' => 30], ['t' => 'cfg', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false]]]
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/kueche'], 5001) === [['t' => 'welcome', 'name' => 'Küche', 'beat' => 30], ['t' => 'cfg', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0]]]
     && $x->values['Connected'] === 1 && $x->timers['Sweep'] === 30000, 'Anmeldung: willkommen, Gerät zählt als verbunden, Aufräum-Timer läuft');
 $liste = json_decode($x->GetDevices(), true);
-check($liste[0] === ['id' => $id, 'name' => 'Küche', 'online' => true, 'blocked' => false, 'seen' => $x->clock, 'page' => '/#/kueche', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false]] && !str_contains($x->GetDevices(), 'secret'),
+check($liste[0] === ['id' => $id, 'name' => 'Küche', 'online' => true, 'blocked' => false, 'seen' => $x->clock, 'page' => '/#/kueche', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0]] && !str_contains($x->GetDevices(), 'secret'),
     'Geräteliste: online mit Seite, ohne Geheimnis');
 $x->clock += 30;
 check($x->ws(['t' => 'beat', 'page' => '/#/flur'], 5001) === [['t' => 'beat']] && $x->sess()['127.0.0.1|5001']['page'] === '/#/flur', 'Lebenszeichen: beantwortet, Seite nachgeführt');
@@ -275,32 +275,32 @@ check(VisuExtCore::cleanHome(5, '/#/12345') === ['minutes' => 5, 'page' => '/#/1
 $x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/flur'], 5004, 'k4');
 $von = count($pushes);
 check($x->SetReturnHome($id, 5, '/#/start') && $x->devs()[$id]['home'] === ['minutes' => 5, 'page' => '/#/start'] && !$x->SetReturnHome('nixnixni', 5, ''), 'Rücksprung: gespeichert; unbekanntes Gerät: false');
-check(array_slice($pushes, $von) === [['/hook/visuext', ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false]], '127.0.0.1', 5004]], 'Rücksprung: die offene Visualisierung des Geräts bekommt die Einstellung sofort, sonst niemand');
+check(array_slice($pushes, $von) === [['/hook/visuext', ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0]], '127.0.0.1', 5004]], 'Rücksprung: die offene Visualisierung des Geräts bekommt die Einstellung sofort, sonst niemand');
 $e = $x->clock + 60;
 [, $laufzeit] = $x->http(['k' => 'script', 'd' => $id, 'm' => '0', 'e' => (string) $e, 's' => VisuExtCore::ticket($id, $x->devs()[$id]['secret'], 0, $e)]);
 check(str_contains($laufzeit, '"home":{"minutes":5,"page":"/#/start"}'), 'Rücksprung: die Laufzeit trägt die Einstellung schon beim Laden');
-check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false]], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0]], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
 $bereiche = array_values(array_filter(json_decode($x->GetConfigurationForm(), true)['actions'], static fn (array $a): bool => ($a['type'] ?? '') === 'ExpansionPanel'));
 $listeIn = static fn (array $bereich): array => array_values(array_filter($bereich['items'], static fn (array $a): bool => ($a['type'] ?? '') === 'List'))[0];
 check(array_column($bereiche, 'caption') === ['Return to start page', 'Screensaver'], 'Rücksprung und Bildschirmschoner: je ein eigener Aufklappbereich');
 check($listeIn($bereiche[0])['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'HomeMinutes' => 5, 'HomePage' => '/#/start']
     && $listeIn($bereiche[0])['onEdit'] === 'VISUEXT_SetReturnHome($id, $Home[\'Id\'], $Home[\'HomeMinutes\'], $Home[\'HomePage\']);', 'Rücksprung: je Gerät einstellbar');
-check($listeIn($bereiche[1])['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'SaverMinutes' => 0, 'SaverMode' => 'black', 'SaverInterval' => 5, 'SaverFill' => false]
+check($listeIn($bereiche[1])['values'][0] === ['Id' => $id, 'Device' => 'Küche neu', 'SaverMinutes' => 0, 'SaverMode' => 'black', 'SaverInterval' => 5, 'SaverFill' => false, 'SaverCategory' => 0]
     && str_contains($listeIn($bereiche[1])['onEdit'], 'VISUEXT_SetScreensaver($id,') && str_contains($listeIn($bereiche[1])['onEdit'], 'VISUEXT_SetScreensaverArt($id,'), 'Bildschirmschoner: je Gerät einstellbar');
 
 // ── Bildschirmschoner ──
-check(VisuExtCore::cleanSaver(10, 'clock') === ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false] && VisuExtCore::cleanSaver(-1, 'disco', 0, 'ja') === ['minutes' => 0, 'mode' => 'black', 'interval' => 1, 'fill' => false]
-    && VisuExtCore::cleanSaver('5000', 'art', 999, true) === ['minutes' => 1440, 'mode' => 'art', 'interval' => 60, 'fill' => true], 'Bildschirmschoner: Minuten begrenzt, unbekannter Inhalt wird schwarz');
+check(VisuExtCore::cleanSaver(10, 'clock') === ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false, 'category' => 0] && VisuExtCore::cleanSaver(-1, 'disco', 0, 'ja') === ['minutes' => 0, 'mode' => 'black', 'interval' => 1, 'fill' => false, 'category' => 0]
+    && VisuExtCore::cleanSaver('5000', 'art', 999, true) === ['minutes' => 1440, 'mode' => 'art', 'interval' => 60, 'fill' => true, 'category' => 0], 'Bildschirmschoner: Minuten begrenzt, unbekannter Inhalt wird schwarz');
 $von = count($pushes);
-check($x->SetScreensaver($id, 10, 'clock') && $x->devs()[$id]['saver'] === ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false] && !$x->SetScreensaver('nixnixni', 1, 'black'), 'Bildschirmschoner: gespeichert; unbekanntes Gerät: false');
-check(array_column(array_slice($pushes, $von), 1) === array_fill(0, 2, ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false]]),
+check($x->SetScreensaver($id, 10, 'clock') && $x->devs()[$id]['saver'] === ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false, 'category' => 0] && !$x->SetScreensaver('nixnixni', 1, 'black'), 'Bildschirmschoner: gespeichert; unbekanntes Gerät: false');
+check(array_column(array_slice($pushes, $von), 1) === array_fill(0, 2, ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false, 'category' => 0]]),
     'Bildschirmschoner: beide offenen Verbindungen des Geräts bekommen die Einstellung sofort');
 $von = count($pushes);
 check($x->StartScreensaver($id) === 2 && $x->Wake('') === 2 && $x->Wake('nixnixni') === 0
     && array_column(array_slice($pushes, $von), 1) === [['t' => 'saver', 'on' => true], ['t' => 'saver', 'on' => true], ['t' => 'saver', 'on' => false], ['t' => 'saver', 'on' => false]],
     'Einschalten und Aufwecken aus Symcon: an ein Gerät oder an alle, Rückgabe zählt die Verbindungen');
-check($x->SetScreensaverArt($id, 3, true) && $x->devs()[$id]['saver'] === ['minutes' => 10, 'mode' => 'clock', 'interval' => 3, 'fill' => true]
-    && $x->SetScreensaver($id, 2, 'art') && $x->devs()[$id]['saver'] === ['minutes' => 2, 'mode' => 'art', 'interval' => 3, 'fill' => true] && !$x->SetScreensaverArt('nixnixni', 3, true),
+check($x->SetScreensaverArt($id, 3, true) && $x->devs()[$id]['saver'] === ['minutes' => 10, 'mode' => 'clock', 'interval' => 3, 'fill' => true, 'category' => 0]
+    && $x->SetScreensaver($id, 2, 'art') && $x->devs()[$id]['saver'] === ['minutes' => 2, 'mode' => 'art', 'interval' => 3, 'fill' => true, 'category' => 0] && !$x->SetScreensaverArt('nixnixni', 3, true),
     'Kunstwerke: Bildwechsel und „füllt den Bildschirm“ gespeichert, beide Einstellungen lassen einander stehen');
 $e = $x->clock + 60;
 [, $laufzeit] = $x->http(['k' => 'script', 'd' => $id, 'm' => '0', 'e' => (string) $e, 's' => VisuExtCore::ticket($id, $x->devs()[$id]['secret'], 0, $e)]);
@@ -337,6 +337,80 @@ check(count($rechte) === 2 && $rechte[0] === ['Device' => 'Küche neu', 'Module'
 $a->parent = 0;
 $b->parent = 0;
 check(!in_array('Permissions', array_column(json_decode($x->GetConfigurationForm(), true)['actions'], 'name'), true), 'Ohne angedockte Module keine Rechte-Liste');
+
+
+// ── Eigene Bilder aus Medienobjekten ──
+$jpeg = "\xFF\xD8\xFF\xE0" . str_repeat('J', 2_000_000);
+$png = "\x89PNG\r\n\x1A\n" . str_repeat('P', 100);
+$bild = static fn (string $inhalt, int $art = MEDIATYPE_IMAGE, bool $da = true, ?int $groesse = null): array
+    => ['type' => OBJECTTYPE_MEDIA, 'media' => [$art, $da, $groesse ?? strlen($inhalt)], 'content' => $inhalt];
+$GLOBALS['objects'] = [
+    40000 => ['type' => OBJECTTYPE_CATEGORY, 'children' => [40001, 40002, 40003, 40004, 40005, 40010, 40020]],
+    40001 => $bild($jpeg),
+    40002 => $bild($png),
+    40003 => $bild('Ton', 2),                                   // kein Bild
+    40004 => $bild($jpeg, MEDIATYPE_IMAGE, false),              // Datei fehlt
+    40005 => $bild($jpeg, MEDIATYPE_IMAGE, true, VisuExtCore::MAX_IMAGE_BYTES + 1), // zu groß
+    40010 => ['type' => OBJECTTYPE_CATEGORY, 'children' => [40011, 40012]],
+    40011 => $bild('<svg xmlns="http://www.w3.org/2000/svg"/>'), // als Bild angelegt, aber keines, das ausgeliefert wird
+    40012 => ['type' => 2],                                     // Variable
+    40020 => ['type' => OBJECTTYPE_LINK, 'target' => 41001],
+    41000 => ['type' => OBJECTTYPE_CATEGORY, 'children' => [41001, 41002]],
+    41001 => $bild($png),
+    41002 => $bild($png),
+];
+check(VisuExtCore::cleanSaver(1, 'media', 5, false, 40000)['category'] === 40000 && VisuExtCore::cleanSaver(1, 'media', 5, false, '40000')['category'] === 0
+    && VisuExtCore::cleanSaver(1, 'media', 5, false, -3) === ['minutes' => 1, 'mode' => 'media', 'interval' => 5, 'fill' => false, 'category' => 0], 'Eigene Bilder: Inhalt „media“, Kategorie nur als positive Zahl');
+check(VisuExtCore::imageType($jpeg) === 'image/jpeg' && VisuExtCore::imageType($png) === 'image/png' && VisuExtCore::imageType('GIF89a..') === 'image/gif'
+    && VisuExtCore::imageType('RIFF1234WEBPVP8 ') === 'image/webp' && VisuExtCore::imageType('<svg') === '' && VisuExtCore::imageType('') === '', 'Bildart nach den ersten Bytes; SVG und Unbekanntes nicht');
+$wahl = [];
+for ($i = 0; $i < 200; $i++) {
+    $wahl[] = VisuExtCore::pickImage([1, 2, 3], [1, 3]);
+    $wahl[] = VisuExtCore::pickImage([1, 2, 3], [3, 1, 2])[0] === 2 ? 'wiederholt' : [2, false];
+}
+check(array_unique($wahl, SORT_REGULAR) === [[2, false]] && VisuExtCore::pickImage([1, 2, 3], [1, 2, 3])[1] === true && VisuExtCore::pickImage([7], [7]) === [7, true]
+    && VisuExtCore::pickImage([7], 'x') === [7, false] && VisuExtCore::pickImage([], [1]) === [0, false],
+    'Zufallswahl: nur noch nicht Gezeigtes; sind alle durch, neue Runde ohne das letzte; ohne Bilder keines');
+$von = count($pushes);
+$x->SetScreensaverArt($id, 3, true);
+check($x->SetScreensaverMedia($id, 40000) && $x->SetScreensaver($id, 2, 'media') && !$x->SetScreensaverMedia('nixnixni', 40000)
+    && $x->devs()[$id]['saver'] === ['minutes' => 2, 'mode' => 'media', 'interval' => 3, 'fill' => true, 'category' => 40000]
+    && end($pushes)[1]['saver']['category'] === 40000, 'Eigene Bilder: Kategorie gespeichert, die anderen Einstellungen bleiben, das Gerät erfährt es sofort');
+$gezeigt = [];
+$adressen = [];
+for ($i = 0; $i < 4; $i++) {
+    $antwort = $x->ws(['t' => 'pic', 'seen' => $gezeigt], 5005, 'k5')[0];
+    $gezeigt[] = $antwort['i'];
+    $adressen[$antwort['i']] = $antwort['u'];
+}
+sort($gezeigt);
+check($gezeigt === [40001, 40002, 40011, 41001] && $antwort['reset'] === false && $x->ws(['t' => 'pic', 'seen' => $gezeigt], 5005, 'k5')[0]['reset'] === true,
+    'Nächstes Bild über den Kanal: jedes Bild der Kategorie einmal (Unterkategorie und Verknüpfung zählen; kein Ton, nichts Fehlendes, nichts zu Großes), dann neue Runde');
+check($x->ws(['t' => 'pic'], 5999, 'fremd') === [['t' => 'unknown']], 'Ohne Sitzung gibt es kein Bild');
+parse_str((string) parse_url($adressen[40001], PHP_URL_QUERY), $q);
+check(str_starts_with($adressen[40001], '/hook/visuext?k=media&d=' . $id . '&i=40001&e=') && !str_contains($adressen[40001], $x->devs()[$id]['secret']), 'Die Adresse trägt eine Unterschrift, keinen Schlüssel');
+$ganz = '';
+$stuecke = 0;
+do {
+    [$status, $teil] = $x->http($q + ['o' => (string) strlen($ganz)]);
+    $ganz .= $teil;
+    $stuecke++;
+} while ($status === 200 && $teil !== '' && strlen($ganz) < strlen($jpeg) && $stuecke < 10);
+check($ganz === $jpeg && $stuecke === 3 && in_array('Content-Type: image/jpeg', $x->headers, true) && in_array('X-Visu-Size: ' . strlen($jpeg), $x->headers, true)
+    && in_array('Cache-Control: no-store', $x->headers, true), 'Auslieferung in Stücken unter Symcons Ausgabegrenze, mit Bildart und ganzer Größe');
+check($x->http($q + ['o' => (string) strlen($jpeg)])[0] === 404 && $x->http(['s' => str_repeat('0', 32)] + $q)[0] === 403 && $x->http(['i' => '40002'] + $q)[0] === 403
+    && $x->http(['k' => 'script', 'm' => '40001'] + $q)[0] === 403 && $x->http(['e' => (string) ($q['e'] + 1)] + $q)[0] === 403, 'Versatz hinter dem Ende: 404; falsche Unterschrift, anderes Bild, als Skript oder verlängert: 403');
+$fuer = static fn (int $media): array => ['k' => 'media', 'd' => $id, 'i' => (string) $media, 'e' => (string) ($x->clock + 60),
+    's' => VisuExtCore::ticket($id, $x->devs()[$id]['secret'], $media, $x->clock + 60, 'media')];
+check($x->http($fuer(41002))[0] === 404 && $x->http($fuer(40011))[0] === 404 && $x->http($fuer(40003))[0] === 404, 'Nur Bilder aus der Kategorie des Geräts, und nur echte Bilder: sonst 404 trotz gültiger Unterschrift');
+$x->clock += VisuExtCore::TICKET_SECONDS + 1;
+check($x->http($q)[0] === 403, 'Die Adresse eines Bildes gilt nur kurz');
+$x->SetScreensaverMedia($id, 41000);
+check($x->http($fuer(40001))[0] === 404 && $x->http($fuer(41002))[0] === 200, 'Kategorie gewechselt: die alten Bilder gibt es nicht mehr, die neuen schon');
+$x->SetScreensaverMedia($id, 49999);
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5006, 'k6')[0]['t'] === 'welcome' && $x->ws(['t' => 'pic', 'seen' => []], 5006, 'k6') === [['t' => 'pic']], 'Kategorie gibt es nicht oder sie ist leer: Antwort ohne Bild');
+$x->SetScreensaverMedia($id, 0);
+$x->SetScreensaver($id, 2, 'art');
 
 // ── Neustart: Puffer leer, Attribute bleiben ──
 $x->buffers = [];

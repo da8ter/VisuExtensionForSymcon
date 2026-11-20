@@ -70,15 +70,16 @@ final class VisuExtCore
      * Unterschrift einer Skript-Adresse. Die Adresse steht im Zugriffsprotokoll von Symcon, deshalb
      * trägt sie keinen Schlüssel, sondern diese Unterschrift mit Ablaufzeit.
      */
-    public static function ticket(string $deviceId, string $deviceKey, int $module, int $expires): string
+    public static function ticket(string $deviceId, string $deviceKey, int $module, int $expires, string $kind = 'script'): string
     {
-        return substr(hash_hmac('sha256', 'script|' . $deviceId . '|' . $module . '|' . $expires, $deviceKey), 0, 32);
+        return substr(hash_hmac('sha256', $kind . '|' . $deviceId . '|' . $module . '|' . $expires, $deviceKey), 0, 32);
     }
 
-    public static function ticketValid(string $deviceId, string $deviceKey, int $module, int $expires, string $given, int $now): bool
+    /** $kind trennt Skripte ('script', $module = Instanz) von Bildern ('media', $module = Medienobjekt). */
+    public static function ticketValid(string $deviceId, string $deviceKey, int $module, int $expires, string $given, int $now, string $kind = 'script'): bool
     {
         return $expires >= $now && $expires <= $now + self::TICKET_SECONDS
-            && hash_equals(self::ticket($deviceId, $deviceKey, $module, $expires), $given);
+            && hash_equals(self::ticket($deviceId, $deviceKey, $module, $expires, $kind), $given);
     }
 
     /** Seite der Visualisierung, wie das Gerät sie meldet: nur Pfad und Anker, gekürzt. */
@@ -106,20 +107,62 @@ final class VisuExtCore
         return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)), 'page' => $page];
     }
 
-    /** Inhalte des Bildschirmschoners: schwarz, Uhr mit Datum oder Kunstwerke im Wechsel. */
-    public const SAVER_MODES = ['black', 'clock', 'art'];
+    /** Inhalte des Bildschirmschoners: schwarz, Uhr mit Datum, Kunstwerke oder eigene Bilder im Wechsel. */
+    public const SAVER_MODES = ['black', 'clock', 'art', 'media'];
+    /** Eigene Bilder: größere Medienobjekte bleiben außen vor (sie laufen ganz durch den Speicher von PHP). */
+    public const MAX_IMAGE_BYTES = 15728640;
+    public const MAX_IMAGES = 2000;
 
     /**
      * Bildschirmschoner eines Geräts: Minuten ohne Bedienung (0 = aus, höchstens ein Tag), Inhalt, und
-     * für Kunstwerke der Bildwechsel in Minuten (1–60) und ob das Bild den Bildschirm füllt (beschnitten).
-     * @return array{minutes:int,mode:string,interval:int,fill:bool}
+     * für Bilder der Bildwechsel in Minuten (1–60), ob das Bild den Bildschirm füllt (beschnitten) und
+     * die Kategorie mit den eigenen Bildern (0 = keine).
+     * @return array{minutes:int,mode:string,interval:int,fill:bool,category:int}
      */
-    public static function cleanSaver(mixed $minutes, mixed $mode, mixed $interval = 5, mixed $fill = false): array
+    public static function cleanSaver(mixed $minutes, mixed $mode, mixed $interval = 5, mixed $fill = false, mixed $category = 0): array
     {
         return ['minutes' => max(0, min(1440, is_numeric($minutes) ? (int) $minutes : 0)),
             'mode' => in_array($mode, self::SAVER_MODES, true) ? $mode : self::SAVER_MODES[0],
             'interval' => max(1, min(60, is_numeric($interval) ? (int) $interval : 5)),
-            'fill' => $fill === true];
+            'fill' => $fill === true,
+            'category' => is_int($category) && $category > 0 ? $category : 0];
+    }
+
+    /** Dasselbe aus dem gespeicherten Eintrag eines Geräts. */
+    public static function saverOf(mixed $saver): array
+    {
+        $saver = is_array($saver) ? $saver : [];
+        return self::cleanSaver($saver['minutes'] ?? 0, $saver['mode'] ?? '', $saver['interval'] ?? 5, $saver['fill'] ?? false, $saver['category'] ?? 0);
+    }
+
+    /**
+     * Zufällig das nächste eigene Bild: eines, das das Gerät in dieser Runde noch nicht gezeigt hat
+     * ($seen, zuletzt gezeigtes am Ende). Sind alle durch, beginnt eine neue Runde, nicht mit dem letzten.
+     * @param list<int> $ids
+     * @return array{0:int,1:bool} Medienobjekt (0 = keines) und ob eine neue Runde beginnt
+     */
+    public static function pickImage(array $ids, mixed $seen): array
+    {
+        $seen = array_values(array_filter(array_slice(is_array($seen) ? $seen : [], -self::MAX_IMAGES), 'is_int'));
+        $fresh = array_values(array_diff($ids, $seen));
+        $reset = false;
+        if ($fresh === []) {
+            $reset = $seen !== [];
+            $fresh = array_values(count($ids) > 1 && $seen !== [] ? array_diff($ids, [end($seen)]) : $ids);
+        }
+        return $fresh === [] ? [0, false] : [$fresh[random_int(0, count($fresh) - 1)], $reset];
+    }
+
+    /** Bildart nach den ersten Bytes; '' = kein Bild, das ein Browser als <img> zeigt (SVG bewusst nicht). */
+    public static function imageType(string $head): string
+    {
+        return match (true) {
+            str_starts_with($head, "\xFF\xD8\xFF") => 'image/jpeg',
+            str_starts_with($head, "\x89PNG\r\n\x1A\n") => 'image/png',
+            str_starts_with($head, 'GIF87a'), str_starts_with($head, 'GIF89a') => 'image/gif',
+            str_starts_with($head, 'RIFF') && substr($head, 8, 4) === 'WEBP' => 'image/webp',
+            default => '',
+        };
     }
 
     /**

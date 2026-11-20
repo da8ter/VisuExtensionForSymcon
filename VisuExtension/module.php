@@ -6,6 +6,7 @@ require_once __DIR__ . '/../libs/VisuExtCore.php';
 require_once __DIR__ . '/../libs/VisuExtDevices.php';
 require_once __DIR__ . '/../libs/VisuExtChannel.php';
 require_once __DIR__ . '/../libs/VisuExtDock.php';
+require_once __DIR__ . '/../libs/VisuExtMedia.php';
 
 /**
  * Visu-Erweiterung: die eine Verbindung zwischen Symcon und der Browser-Erweiterung (Vertrag 2).
@@ -15,6 +16,7 @@ require_once __DIR__ . '/../libs/VisuExtDock.php';
  *   GET  ?k=ext&d=<Kennung>                 Beschreibung; Schlüssel in der Kopfzeile X-Visu-Key
  *   POST ?k=ext     {d, key}                dasselbe, Schlüssel im Rumpf
  *   GET  ?k=script&d=&m=&e=&s=              ein Skript (m=0: die Laufzeit), Adresse mit Ticket
+ *   GET  ?k=media&d=&i=&e=&s=&o=            ein Stück eines eigenen Bildes für den Bildschirmschoner
  *   WebSocket                               Kanal zu den Geräten (libs/VisuExtChannel.php)
  * Schlüssel stehen nie in einer Adresse: Symcon schreibt Adressen ins Zugriffsprotokoll.
  *
@@ -25,6 +27,7 @@ class VisuExtension extends IPSModuleStrict
     use VisuExtDevices;
     use VisuExtChannel;
     use VisuExtDock;
+    use VisuExtMedia;
 
     public const VERSION = '0.2';
 
@@ -242,6 +245,10 @@ class VisuExtension extends IPSModuleStrict
                 $this->head('Content-Type: application/javascript; charset=utf-8');
                 echo $code;
                 return;
+
+            case 'media':
+                $this->serveMedia();
+                return;
         }
         $this->status(404);
     }
@@ -310,7 +317,7 @@ class VisuExtension extends IPSModuleStrict
         foreach ($this->deviceList() as $device) {
             $home[] = ['Id' => $device['id'], 'Device' => $device['name'], 'HomeMinutes' => $device['home']['minutes'], 'HomePage' => $device['home']['page']];
             $saver[] = ['Id' => $device['id'], 'Device' => $device['name'], 'SaverMinutes' => $device['saver']['minutes'], 'SaverMode' => $device['saver']['mode'],
-                'SaverInterval' => $device['saver']['interval'], 'SaverFill' => $device['saver']['fill']];
+                'SaverInterval' => $device['saver']['interval'], 'SaverFill' => $device['saver']['fill'], 'SaverCategory' => $device['saver']['category']];
         }
         $minutes = ['type' => 'NumberSpinner', 'minimum' => 0, 'maximum' => 1440, 'suffix' => ' min'];
         $id = ['caption' => 'ID', 'name' => 'Id', 'width' => '0px', 'visible' => false];
@@ -346,20 +353,22 @@ class VisuExtension extends IPSModuleStrict
                     ['type' => 'Label', 'caption' => 'After the set minutes without touch, click, key or mouse wheel a layer covers the visualization on that device (0 = off); the first touch only wakes it up. Takes effect immediately.'],
                     ['type' => 'Label', 'caption' => 'From scripts: VISUEXT_Wake and VISUEXT_StartScreensaver, e.g. for a motion detector.'],
                     ['type' => 'Label', 'caption' => 'Artworks: famous public-domain paintings in turn. The browser loads the images directly from Wikimedia Commons, so the device needs internet access; without it the clock is shown. "Fills the screen" crops the image instead of showing black bars.'],
+                    ['type' => 'Label', 'caption' => 'Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown.'],
                     [
                         'type'     => 'List',
                         'name'     => 'Saver',
                         'rowCount' => 6,
                         'add'      => false,
                         'delete'   => false,
-                        'onEdit'   => 'VISUEXT_SetScreensaver($id, $Saver[\'Id\'], $Saver[\'SaverMinutes\'], $Saver[\'SaverMode\']); VISUEXT_SetScreensaverArt($id, $Saver[\'Id\'], $Saver[\'SaverInterval\'], $Saver[\'SaverFill\']);',
+                        'onEdit'   => 'VISUEXT_SetScreensaver($id, $Saver[\'Id\'], $Saver[\'SaverMinutes\'], $Saver[\'SaverMode\']); VISUEXT_SetScreensaverArt($id, $Saver[\'Id\'], $Saver[\'SaverInterval\'], $Saver[\'SaverFill\']); VISUEXT_SetScreensaverMedia($id, $Saver[\'Id\'], $Saver[\'SaverCategory\']);',
                         'columns'  => [
                             $device,
                             ['caption' => 'Screensaver after', 'name' => 'SaverMinutes', 'width' => '220px', 'edit' => $minutes],
                             ['caption' => 'Screensaver shows', 'name' => 'SaverMode', 'width' => '260px', 'edit' => ['type' => 'Select', 'options' => [
-                                ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock'], ['caption' => 'Artworks', 'value' => 'art']]]],
-                            ['caption' => 'Next artwork every', 'name' => 'SaverInterval', 'width' => '200px', 'edit' => ['type' => 'NumberSpinner', 'minimum' => 1, 'maximum' => 60, 'suffix' => ' min']],
-                            ['caption' => 'Artwork fills the screen', 'name' => 'SaverFill', 'width' => '200px', 'edit' => ['type' => 'CheckBox']],
+                                ['caption' => 'Black', 'value' => 'black'], ['caption' => 'Clock', 'value' => 'clock'], ['caption' => 'Artworks', 'value' => 'art'], ['caption' => 'Own images', 'value' => 'media']]]],
+                            ['caption' => 'Next image every', 'name' => 'SaverInterval', 'width' => '200px', 'edit' => ['type' => 'NumberSpinner', 'minimum' => 1, 'maximum' => 60, 'suffix' => ' min']],
+                            ['caption' => 'Image fills the screen', 'name' => 'SaverFill', 'width' => '200px', 'edit' => ['type' => 'CheckBox']],
+                            ['caption' => 'Category of own images', 'name' => 'SaverCategory', 'width' => '240px', 'edit' => ['type' => 'SelectCategory']],
                             $id,
                         ],
                         'values'   => $saver,

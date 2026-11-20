@@ -88,40 +88,40 @@ trait VisuExtDevices
 
     /**
      * Bildschirmschoner: Nach $Minutes ohne Bedienung (0 = aus) legt sich auf diesem Gerät eine Ebene
-     * über die Visualisierung, $Mode „black“ (schwarz), „clock“ (Uhr mit Datum) oder „art“ (Kunstwerke
-     * im Wechsel, siehe SetScreensaverArt). Die erste Berührung weckt nur auf. Wirkt sofort.
+     * über die Visualisierung, $Mode „black“ (schwarz), „clock“ (Uhr mit Datum), „art“ (Kunstwerke
+     * im Wechsel) oder „media“ (eigene Bilder, siehe SetScreensaverMedia). Die erste Berührung weckt nur auf. Wirkt sofort.
      */
     public function SetScreensaver(string $DeviceID, int $Minutes, string $Mode): bool
     {
-        $found = $this->locked(function () use ($DeviceID, $Minutes, $Mode): bool {
-            $devices = $this->devices();
-            if (!isset($devices[$DeviceID])) {
-                return false;
-            }
-            $old = (array) ($devices[$DeviceID]['saver'] ?? []);
-            $devices[$DeviceID]['saver'] = VisuExtCore::cleanSaver($Minutes, $Mode, $old['interval'] ?? 5, $old['fill'] ?? false);
-            $this->saveDevices($devices);
-            return true;
-        });
-        if ($found) {
-            $this->sendConfig($DeviceID);
-        }
-        return (bool) $found;
+        return $this->changeSaver($DeviceID, ['minutes' => $Minutes, 'mode' => $Mode]);
     }
 
     /**
-     * Kunstwerke im Bildschirmschoner: Bildwechsel alle $IntervalMinutes (1–60) und ob das Bild den
-     * ganzen Bildschirm füllt ($Fill: beschnitten statt mit schwarzem Rand).
+     * Bilder im Bildschirmschoner (Kunstwerke und eigene Bilder): Bildwechsel alle $IntervalMinutes
+     * (1–60) und ob das Bild den ganzen Bildschirm füllt ($Fill: beschnitten statt mit schwarzem Rand).
      */
     public function SetScreensaverArt(string $DeviceID, int $IntervalMinutes, bool $Fill): bool
     {
-        $found = $this->locked(function () use ($DeviceID, $IntervalMinutes, $Fill): bool {
+        return $this->changeSaver($DeviceID, ['interval' => $IntervalMinutes, 'fill' => $Fill]);
+    }
+
+    /**
+     * Eigene Bilder im Bildschirmschoner (Inhalt „media“): die Kategorie, aus der dieses Gerät zufällig
+     * Bild-Medienobjekte zeigt, auch aus Unterkategorien und über Verknüpfungen (0 = keine).
+     */
+    public function SetScreensaverMedia(string $DeviceID, int $CategoryID): bool
+    {
+        return $this->changeSaver($DeviceID, ['category' => $CategoryID]);
+    }
+
+    private function changeSaver(string $DeviceID, array $change): bool
+    {
+        $found = $this->locked(function () use ($DeviceID, $change): bool {
             $devices = $this->devices();
             if (!isset($devices[$DeviceID])) {
                 return false;
             }
-            $old = (array) ($devices[$DeviceID]['saver'] ?? []);
-            $devices[$DeviceID]['saver'] = VisuExtCore::cleanSaver($old['minutes'] ?? 0, $old['mode'] ?? '', $IntervalMinutes, $Fill);
+            $devices[$DeviceID]['saver'] = VisuExtCore::saverOf($change + VisuExtCore::saverOf($devices[$DeviceID]['saver'] ?? null));
             $this->saveDevices($devices);
             return true;
         });
@@ -161,7 +161,7 @@ trait VisuExtDevices
         });
     }
 
-    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode, interval, fill}. Ohne Schlüssel. */
+    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode, interval, fill, category}. Ohne Schlüssel. */
     public function GetDevices(): string
     {
         return (string) json_encode($this->deviceList(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -260,7 +260,7 @@ trait VisuExtDevices
                 'seen'    => isset($online[$id]) ? $online[$id]['t'] : (int) ($device['seen'] ?? 0),
                 'page'    => isset($online[$id]) ? $online[$id]['page'] : '',
                 'home'    => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
-                'saver'   => VisuExtCore::cleanSaver($device['saver']['minutes'] ?? 0, $device['saver']['mode'] ?? '', $device['saver']['interval'] ?? 5, $device['saver']['fill'] ?? false),
+                'saver'   => VisuExtCore::saverOf($device['saver'] ?? null),
             ];
         }
         return $list;

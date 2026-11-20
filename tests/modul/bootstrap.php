@@ -5,6 +5,7 @@ declare(strict_types=1);
 // SDK-Attrappe für das Modul „Visu-Erweiterung“. Verbindet sich nie mit einem laufenden Symcon.
 // Signaturen wie IPSModuleStrict: unter strict_types fällt jeder lockere Aufruf als TypeError auf.
 const KR_INIT = 10102, KR_READY = 10103, IPS_KERNELSTARTED = 10001, KL_WARNING = 10204, KL_ERROR = 10205,
+    OBJECTTYPE_CATEGORY = 0, OBJECTTYPE_MEDIA = 5, OBJECTTYPE_LINK = 6, MEDIATYPE_IMAGE = 1,
     IS_ACTIVE = 102, VARIABLETYPE_BOOLEAN = 0, VARIABLETYPE_INTEGER = 1, VARIABLETYPE_STRING = 3,
     VARIABLE_PRESENTATION_VALUE_PRESENTATION = '{3319437D-7CDE-699D-750A-3C6A3841FA75}';
 
@@ -107,6 +108,19 @@ $semaphores = [];
 
 const WEBHOOK_CONTROL_ID = 11111;
 
+// Objektbaum für die eigenen Bilder: ID => ['type', 'children' => [], 'target', 'media' => [Art, verfügbar, Größe], 'content']
+$objects = [];
+function IPS_CategoryExists(int $ID): bool { return ($GLOBALS['objects'][$ID]['type'] ?? -1) === OBJECTTYPE_CATEGORY; }
+function IPS_MediaExists(int $ID): bool { return ($GLOBALS['objects'][$ID]['type'] ?? -1) === OBJECTTYPE_MEDIA; }
+function IPS_GetChildrenIDs(int $ID): array { return $GLOBALS['objects'][$ID]['children'] ?? []; }
+function IPS_GetObject(int $ID): array { return ['ObjectType' => $GLOBALS['objects'][$ID]['type']]; }
+function IPS_GetLink(int $ID): array { return ['TargetID' => $GLOBALS['objects'][$ID]['target']]; }
+function IPS_GetMedia(int $ID): array
+{
+    [$type, $available, $size] = $GLOBALS['objects'][$ID]['media'];
+    return ['MediaType' => $type, 'MediaIsAvailable' => $available, 'MediaSize' => $size];
+}
+function IPS_GetMediaContent(int $ID): string { return base64_encode($GLOBALS['objects'][$ID]['content'] ?? ''); }
 function IPS_GetKernelRunlevel(): int { return $GLOBALS['runlevel']; }
 function IPS_GetName(int $ID): string { return 'Visu-Erweiterung'; }
 function IPS_GetOption(string $Option): mixed { return false; }
