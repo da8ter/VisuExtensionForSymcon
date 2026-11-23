@@ -9,7 +9,7 @@
   if (/^\/(console|hook)(\/|$)/.test(location.pathname)) return;
   var core = globalThis.VisuExt;
   if (!core || !globalThis.chrome || !chrome.storage) return;
-  var bereit = false, wartend = [];
+  var bereit = false, wartend = [], geprueft = false; // geprueft: Symcon hat dieses Gerät mit Schlüssel bestätigt
 
   function senden(scripts) {
     if (!bereit) { wartend.push(scripts); return; }
@@ -34,7 +34,7 @@
         .then(function (res) { return res.ok ? res.json() : null; })
         .then(function (data) {
           var m = data ? core.checkManifest(data, location.origin) : null;
-          if (m && m.ok && m.scripts.length) senden(m.scripts);
+          if (m && m.ok && m.scripts.length) { geprueft = true; senden(m.scripts); kamera(); }
         })
         .catch(function () { /* Server nicht erreichbar oder keine Beschreibung: nichts laden */ });
     });
@@ -48,9 +48,10 @@
 
   function melden(o) { document.dispatchEvent(new CustomEvent('visu-ext:motion', { detail: JSON.stringify(o) })); }
   function kamera() {
-    if (!(will.on && erlaubt)) {
+    // Nur auf einer Seite, für die Symcon die Beschreibung mit dem Geräteschlüssel geliefert hat (dort läuft die Laufzeit)
+    if (!(will.on && erlaubt && geprueft)) {
       if (port) { var p = port; port = null; p.disconnect(); }
-      if (will.on) melden({ t: 'cam', state: 'blocked' }); // in Symcon an, an diesem Gerät nicht erlaubt
+      if (will.on && geprueft) melden({ t: 'cam', state: 'blocked' }); // in Symcon an, an diesem Gerät nicht erlaubt
       return;
     }
     if (!port) {
