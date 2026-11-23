@@ -13,17 +13,18 @@ declare(strict_types=1);
 trait VisuExtMotion
 {
     /**
-     * Bewegungsmelder eines Geräts ein- oder ausschalten; $Sensitivity 1 = gering, 2 = mittel, 3 = hoch.
+     * Bewegungsmelder eines Geräts ein- oder ausschalten; $Sensitivity 1 = gering, 2 = mittel, 3 = hoch;
+     * $HoldSeconds: so lange nach der letzten Bewegung bleibt die Variable „Bewegung“ an (5–3600).
      * Die Kamera läuft nur, wenn zusätzlich in der Erweiterung auf dem Gerät zugestimmt ist. Wirkt sofort.
      */
-    public function SetMotion(string $DeviceID, bool $Enabled, int $Sensitivity): bool
+    public function SetMotion(string $DeviceID, bool $Enabled, int $Sensitivity, int $HoldSeconds): bool
     {
-        $found = $this->locked(function () use ($DeviceID, $Enabled, $Sensitivity): bool {
+        $found = $this->locked(function () use ($DeviceID, $Enabled, $Sensitivity, $HoldSeconds): bool {
             $devices = $this->devices();
             if (!isset($devices[$DeviceID])) {
                 return false;
             }
-            $devices[$DeviceID]['motion'] = VisuExtCore::cleanMotion($Enabled, $Sensitivity);
+            $devices[$DeviceID]['motion'] = VisuExtCore::cleanMotion($Enabled, $Sensitivity, $HoldSeconds);
             $this->saveDevices($devices);
             return true;
         });
@@ -135,7 +136,7 @@ trait VisuExtMotion
         foreach ($this->devices() as $id => $device) {
             $motion = VisuExtCore::motionOf($device['motion'] ?? null);
             $cam = $cams[(string) $id] ?? '';
-            $rows[] = ['Id' => (string) $id, 'Device' => (string) $device['name'], 'MotionOn' => $motion['on'], 'MotionLevel' => $motion['level'],
+            $rows[] = ['Id' => (string) $id, 'Device' => (string) $device['name'], 'MotionOn' => $motion['on'], 'MotionLevel' => $motion['level'], 'MotionHold' => $motion['hold'],
                 'Camera' => $motion['on'] && isset($labels[$cam]) ? $this->Translate($labels[$cam]) : '–'];
         }
         return $rows;
@@ -147,7 +148,7 @@ trait VisuExtMotion
             'type'    => 'ExpansionPanel',
             'caption' => 'Motion detector',
             'items'   => [
-                ['type' => 'Label', 'caption' => 'The camera of the device wakes the screensaver and sets the variable "motion" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.'],
+                ['type' => 'Label', 'caption' => 'The camera of the device wakes the screensaver and sets the variable "motion" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.'],
                 ['type' => 'Label', 'caption' => 'Needs consent on the device: "Allow the camera as motion detector" in the setup of the browser extension. Only works while the display is on.'],
                 [
                     'type'     => 'List',
@@ -155,12 +156,13 @@ trait VisuExtMotion
                     'rowCount' => 6,
                     'add'      => false,
                     'delete'   => false,
-                    'onEdit'   => 'VISUEXT_SetMotion($id, $Motion[\'Id\'], $Motion[\'MotionOn\'], $Motion[\'MotionLevel\']);',
+                    'onEdit'   => 'VISUEXT_SetMotion($id, $Motion[\'Id\'], $Motion[\'MotionOn\'], $Motion[\'MotionLevel\'], $Motion[\'MotionHold\']);',
                     'columns'  => [
                         ['caption' => 'Device', 'name' => 'Device', 'width' => 'auto'],
                         ['caption' => 'Active', 'name' => 'MotionOn', 'width' => '90px', 'edit' => ['type' => 'CheckBox']],
                         ['caption' => 'Sensitivity', 'name' => 'MotionLevel', 'width' => '160px', 'edit' => ['type' => 'Select', 'options' => [
                             ['caption' => 'Low', 'value' => 1], ['caption' => 'Medium', 'value' => 2], ['caption' => 'High', 'value' => 3]]]],
+                        ['caption' => 'Reset after', 'name' => 'MotionHold', 'width' => '160px', 'edit' => ['type' => 'NumberSpinner', 'minimum' => 5, 'maximum' => 3600, 'suffix' => ' s']],
                         ['caption' => 'Camera', 'name' => 'Camera', 'width' => '320px'],
                         ['caption' => 'ID', 'name' => 'Id', 'width' => '0px', 'visible' => false],
                     ],

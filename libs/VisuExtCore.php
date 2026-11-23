@@ -129,19 +129,21 @@ final class VisuExtCore
     }
 
     /**
-     * Bewegungsmelder eines Geräts: an/aus und Empfindlichkeit (1 = gering, 2 = mittel, 3 = hoch).
-     * @return array{on:bool,level:int}
+     * Bewegungsmelder eines Geräts: an/aus, Empfindlichkeit (1 = gering, 2 = mittel, 3 = hoch) und
+     * Rückstellzeit in Sekunden (so lange nach der letzten Bewegung gilt sie noch; 5 bis 3600).
+     * @return array{on:bool,level:int,hold:int}
      */
-    public static function cleanMotion(mixed $on, mixed $level): array
+    public static function cleanMotion(mixed $on, mixed $level, mixed $hold = 30): array
     {
-        return ['on' => $on === true, 'level' => in_array($level, [1, 2, 3], true) ? $level : 2];
+        return ['on' => $on === true, 'level' => in_array($level, [1, 2, 3], true) ? $level : 2,
+            'hold' => max(5, min(3600, is_numeric($hold) ? (int) $hold : 30))];
     }
 
     /** Dasselbe aus dem gespeicherten Eintrag eines Geräts. */
     public static function motionOf(mixed $motion): array
     {
         $motion = is_array($motion) ? $motion : [];
-        return self::cleanMotion($motion['on'] ?? false, $motion['level'] ?? 2);
+        return self::cleanMotion($motion['on'] ?? false, $motion['level'] ?? 2, $motion['hold'] ?? 30);
     }
 
     /** Zustand der Kamera, wie ihn die Laufzeit meldet; Unbekanntes wird „error“. */

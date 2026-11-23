@@ -194,10 +194,10 @@ $a->script = 'window.__probe = /*CONFIG*/null;';
 $kanal = VisuExtCore::channelToken($id, hash('sha256', $key));
 check($x->ws(['t' => 'hello', 'd' => $id, 'c' => 'falsch'], 5001) === [['t' => 'denied']] && $x->sess() === [], 'Anmeldung mit falschem Wert: abgewiesen');
 check($x->ws(['t' => 'beat'], 5001) === [['t' => 'unknown']], 'Lebenszeichen ohne Anmeldung: „unbekannt“');
-check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/kueche'], 5001) === [['t' => 'welcome', 'name' => 'Küche', 'beat' => 30], ['t' => 'cfg', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2]]]
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/kueche'], 5001) === [['t' => 'welcome', 'name' => 'Küche', 'beat' => 30], ['t' => 'cfg', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2, 'hold' => 30]]]
     && $x->values['Connected'] === 1 && $x->timers['Sweep'] === 30000, 'Anmeldung: willkommen, Gerät zählt als verbunden, Aufräum-Timer läuft');
 $liste = json_decode($x->GetDevices(), true);
-check($liste[0] === ['id' => $id, 'name' => 'Küche', 'online' => true, 'blocked' => false, 'seen' => $x->clock, 'page' => '/#/kueche', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2]] && !str_contains($x->GetDevices(), 'secret'),
+check($liste[0] === ['id' => $id, 'name' => 'Küche', 'online' => true, 'blocked' => false, 'seen' => $x->clock, 'page' => '/#/kueche', 'home' => ['minutes' => 0, 'page' => ''], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2, 'hold' => 30]] && !str_contains($x->GetDevices(), 'secret'),
     'Geräteliste: online mit Seite, ohne Geheimnis');
 $x->clock += 30;
 check($x->ws(['t' => 'beat', 'page' => '/#/flur'], 5001) === [['t' => 'beat']] && $x->sess()['127.0.0.1|5001']['page'] === '/#/flur', 'Lebenszeichen: beantwortet, Seite nachgeführt');
@@ -275,11 +275,11 @@ check(VisuExtCore::cleanHome(5, '/#/12345') === ['minutes' => 5, 'page' => '/#/1
 $x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal, 'page' => '/#/flur'], 5004, 'k4');
 $von = count($pushes);
 check($x->SetReturnHome($id, 5, '/#/start') && $x->devs()[$id]['home'] === ['minutes' => 5, 'page' => '/#/start'] && !$x->SetReturnHome('nixnixni', 5, ''), 'Rücksprung: gespeichert; unbekanntes Gerät: false');
-check(array_slice($pushes, $von) === [['/hook/visuext', ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2]], '127.0.0.1', 5004]], 'Rücksprung: die offene Visualisierung des Geräts bekommt die Einstellung sofort, sonst niemand');
+check(array_slice($pushes, $von) === [['/hook/visuext', ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2, 'hold' => 30]], '127.0.0.1', 5004]], 'Rücksprung: die offene Visualisierung des Geräts bekommt die Einstellung sofort, sonst niemand');
 $e = $x->clock + 60;
 [, $laufzeit] = $x->http(['k' => 'script', 'd' => $id, 'm' => '0', 'e' => (string) $e, 's' => VisuExtCore::ticket($id, $x->devs()[$id]['secret'], 0, $e)]);
 check(str_contains($laufzeit, '"home":{"minutes":5,"page":"/#/start"}'), 'Rücksprung: die Laufzeit trägt die Einstellung schon beim Laden');
-check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2]], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
+check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5005, 'k5')[1] === ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 0, 'mode' => 'black', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2, 'hold' => 30]], 'Rücksprung: nach jeder Anmeldung noch einmal, falls sie sich getrennt geändert hat');
 $bereiche = array_values(array_filter(json_decode($x->GetConfigurationForm(), true)['actions'], static fn (array $a): bool => ($a['type'] ?? '') === 'ExpansionPanel'));
 $listeIn = static fn (array $bereich): array => array_values(array_filter($bereich['items'], static fn (array $a): bool => ($a['type'] ?? '') === 'List'))[0];
 check(array_column($bereiche, 'caption') === ['Return to start page', 'Screensaver', 'Motion detector'], 'Rücksprung, Bildschirmschoner und Bewegungsmelder: je ein eigener Aufklappbereich');
@@ -293,7 +293,7 @@ check(VisuExtCore::cleanSaver(10, 'clock') === ['minutes' => 10, 'mode' => 'cloc
     && VisuExtCore::cleanSaver('5000', 'art', 999, true) === ['minutes' => 1440, 'mode' => 'art', 'interval' => 60, 'fill' => true, 'category' => 0], 'Bildschirmschoner: Minuten begrenzt, unbekannter Inhalt wird schwarz');
 $von = count($pushes);
 check($x->SetScreensaver($id, 10, 'clock') && $x->devs()[$id]['saver'] === ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false, 'category' => 0] && !$x->SetScreensaver('nixnixni', 1, 'black'), 'Bildschirmschoner: gespeichert; unbekanntes Gerät: false');
-check(array_column(array_slice($pushes, $von), 1) === array_fill(0, 2, ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2]]),
+check(array_column(array_slice($pushes, $von), 1) === array_fill(0, 2, ['t' => 'cfg', 'home' => ['minutes' => 5, 'page' => '/#/start'], 'saver' => ['minutes' => 10, 'mode' => 'clock', 'interval' => 5, 'fill' => false, 'category' => 0], 'motion' => ['on' => false, 'level' => 2, 'hold' => 30]]),
     'Bildschirmschoner: beide offenen Verbindungen des Geräts bekommen die Einstellung sofort');
 $von = count($pushes);
 check($x->StartScreensaver($id) === 2 && $x->Wake('') === 2 && $x->Wake('nixnixni') === 0
@@ -413,30 +413,31 @@ $x->SetScreensaverMedia($id, 0);
 $x->SetScreensaver($id, 2, 'art');
 
 // ── Bewegungsmelder ──
-check(VisuExtCore::cleanMotion(true, 3) === ['on' => true, 'level' => 3] && VisuExtCore::cleanMotion('ja', 7) === ['on' => false, 'level' => 2]
-    && VisuExtCore::motionOf(null) === ['on' => false, 'level' => 2] && VisuExtCore::cleanCamState('ok') === 'ok' && VisuExtCore::cleanCamState('<b>') === 'error',
-    'Bewegungsmelder: nur echtes true schaltet ein, Empfindlichkeit 1–3, unbekannter Kamera-Zustand wird „error“');
+check(VisuExtCore::cleanMotion(true, 3, 120) === ['on' => true, 'level' => 3, 'hold' => 120] && VisuExtCore::cleanMotion('ja', 7, 1) === ['on' => false, 'level' => 2, 'hold' => 5]
+    && VisuExtCore::cleanMotion(true, 1, 99999)['hold'] === 3600
+    && VisuExtCore::motionOf(null) === ['on' => false, 'level' => 2, 'hold' => 30] && VisuExtCore::cleanCamState('ok') === 'ok' && VisuExtCore::cleanCamState('<b>') === 'error',
+    'Bewegungsmelder: nur echtes true schaltet ein, Empfindlichkeit 1–3, Rückstellzeit 5–3600 s, unbekannter Kamera-Zustand wird „error“');
 check($x->ws(['t' => 'hello', 'd' => $id, 'c' => $kanal], 5007, 'k7')[0]['t'] === 'welcome' && $x->ws(['t' => 'motion', 'on' => true], 5007, 'k7') === []
     && !isset($x->variables['Motion_' . $id]), 'Bewegungsmelder aus: Meldungen des Geräts bleiben folgenlos, keine Variable');
 $von = count($pushes);
-check($x->SetMotion($id, true, 3) && $x->devs()[$id]['motion'] === ['on' => true, 'level' => 3] && !$x->SetMotion('nixnixni', true, 2)
+check($x->SetMotion($id, true, 3, 120) && $x->devs()[$id]['motion'] === ['on' => true, 'level' => 3, 'hold' => 120] && !$x->SetMotion('nixnixni', true, 2, 30)
     && $x->variables['Motion_' . $id]['type'] === VARIABLETYPE_BOOLEAN && $x->values['Motion_' . $id] === false
     && $x->variables['Motion_' . $id]['presentation']['PRESENTATION'] === VARIABLE_PRESENTATION_VALUE_PRESENTATION,
     'Bewegungsmelder an: gespeichert, Variable „Bewegung“ des Geräts mit Darstellung');
-check(array_column(array_slice($pushes, $von), 1)[0]['motion'] === ['on' => true, 'level' => 3], 'Bewegungsmelder: die offene Visualisierung bekommt die Einstellung sofort');
+check(array_column(array_slice($pushes, $von), 1)[0]['motion'] === ['on' => true, 'level' => 3, 'hold' => 120], 'Bewegungsmelder: die offene Visualisierung bekommt die Einstellung sofort');
 $x->ws(['t' => 'motion', 'on' => true], 5007, 'k7');
 check($x->values['Motion_' . $id] === true, 'Bewegung gemeldet: Variable an');
 $x->ws(['t' => 'cam', 'state' => 'blocked'], 5007, 'k7');
 $zeile = array_values(array_filter(json_decode($x->formFields['Motion']['values'], true), static fn (array $r): bool => $r['Id'] === $id))[0];
-check($zeile['MotionOn'] === true && $zeile['MotionLevel'] === 3 && $zeile['Camera'] === 'not allowed in the extension on this device', 'Zustand der Kamera erscheint im Formular');
+check($zeile['MotionOn'] === true && $zeile['MotionLevel'] === 3 && $zeile['MotionHold'] === 120 && $zeile['Camera'] === 'not allowed in the extension on this device', 'Zustand der Kamera erscheint im Formular');
 $x->ws(['t' => 'motion', 'on' => false], 5007, 'k7');
 check($x->values['Motion_' . $id] === false, 'Ende der Bewegung: Variable aus');
 $x->ws(['t' => 'motion', 'on' => true], 5007, 'k7');
 $x->clock += VisuExtCore::SESSION_SECONDS + 1;
 $x->RequestAction('Sweep', 0);
 check($x->values['Motion_' . $id] === false, 'Gerät verliert die Verbindung: Variable aus');
-$x->SetMotion($id, false, 2);
-check(!isset($x->variables['Motion_' . $id]) && $x->devs()[$id]['motion'] === ['on' => false, 'level' => 2], 'Bewegungsmelder aus: Variable entfernt');
+$x->SetMotion($id, false, 2, 30);
+check(!isset($x->variables['Motion_' . $id]) && $x->devs()[$id]['motion'] === ['on' => false, 'level' => 2, 'hold' => 30], 'Bewegungsmelder aus: Variable entfernt');
 
 // ── Neustart: Puffer leer, Attribute bleiben ──
 $x->buffers = [];

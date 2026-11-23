@@ -67,8 +67,9 @@
             "Medium": "Mittel",
             "High": "Hoch",
             "Camera": "Kamera",
-            "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.": "Die Kamera des Geräts weckt den Bildschirmschoner und setzt die Variable „Bewegung“ des Geräts (nach 30 Sekunden ohne Bewegung wieder aus). Die Kamera läuft in der Browser-Erweiterung; Bilder verlassen das Gerät nie.",
-            "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Braucht die Zustimmung am Gerät: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Browser-Erweiterung. Wirkt nur, solange das Display an ist."
+            "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.": "Die Kamera des Geräts weckt den Bildschirmschoner und setzt die Variable „Bewegung“ des Geräts; nach der Rückstellzeit ohne Bewegung geht sie wieder aus. Die Kamera läuft in der Browser-Erweiterung; Bilder verlassen das Gerät nie.",
+            "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Braucht die Zustimmung am Gerät: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Browser-Erweiterung. Wirkt nur, solange das Display an ist.",
+            "Reset after": "Rückstellzeit"
         },
         "en": {
             "Visu Extension": "Visu Extension",
@@ -137,8 +138,9 @@
             "Medium": "Medium",
             "High": "High",
             "Camera": "Camera",
-            "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.": "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.",
-            "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on."
+            "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.": "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.",
+            "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.",
+            "Reset after": "Reset after"
         }
     }
 }

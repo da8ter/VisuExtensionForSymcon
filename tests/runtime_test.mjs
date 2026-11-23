@@ -328,6 +328,36 @@ function welt() {
   pruefe('Ausgeschaltet: die Brücke erfährt es (Kamera aus)', kamera(), [{ on: false, level: 3 }]);
 }
 
+// ── Bewegungsmelder: Rückstellzeit ──
+{
+  const { win, sockets, lade, vor, gefeuert, bruecke } = welt();
+  lade({ motion: { on: true, level: 2, hold: 90 } });
+  const kamera = () => gefeuert.filter((g) => g[0] === 'visu-ext:camera').map((g) => JSON.parse(g[1]));
+  const s = sockets[0];
+  const lebe = (ms) => { while (ms > 0) { const d = Math.min(ms, 10000); vor(d); ms -= d; if (!s.zu) s.empfange({ t: 'beat' }); } };
+  s.oeffne();
+  s.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  pruefe('Die Brücke erfährt nur an/aus und Stufe, nicht die Rückstellzeit', kamera(), [{ on: true, level: 2 }]);
+  s.gesendet.length = 0; // nach der Anmeldung meldet die Laufzeit einmal den Stand (keine Bewegung)
+  const ende = () => s.gesendet.filter((m) => m.t === 'motion' && m.on === false).length;
+  bruecke({ t: 'motion' });
+  lebe(89000);
+  pruefe('Rückstellzeit 90 s: nach 89 s noch kein Ende', ende(), 0);
+  lebe(1500);
+  pruefe('… nach 90 s das Ende an Symcon', ende(), 1);
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 0, mode: 'black' }, motion: { on: true, level: 2, hold: 10 } });
+  pruefe('Nur die Rückstellzeit geändert: die Kamera wird nicht neu gestartet', kamera().length, 1);
+  bruecke({ t: 'motion' });
+  lebe(10500);
+  pruefe('Neue Rückstellzeit 10 s gilt sofort', ende(), 2);
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 0, mode: 'black' }, motion: { on: true, level: 2, hold: 1 } });
+  bruecke({ t: 'motion' });
+  lebe(4000);
+  pruefe('Unter 5 s wird auf 5 s angehoben', ende(), 2);
+  lebe(1500);
+  pruefe('… und endet nach 5 s', ende(), 3);
+}
+
 // ── Bildschirmschoner mit Kunstwerken ──
 {
   const KUNST = [{ title: 'Die Sternennacht', artist: 'Vincent van Gogh', year: '1889', file: 'Van Gogh - Starry Night.jpg' },

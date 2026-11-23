@@ -30,7 +30,7 @@
  * Und der Bewegungsmelder (C.motion, „cfg“): Die Kamera läuft nicht hier, sondern in der Erweiterung
  * (eine Seite über http darf sie nicht öffnen). Die Laufzeit nennt der Brücke die Einstellung
  * (DOM-Ereignis „visu-ext:camera“) und bekommt Bewegungen zurück („visu-ext:motion“): Sie wecken den
- * Bildschirmschoner und gehen als „motion“ an Symcon, nach MOTION_HOLD ohne Bewegung als Ende.
+ * Bildschirmschoner und gehen als „motion“ an Symcon, nach der Rückstellzeit (motion.hold) ohne Bewegung als Ende.
  */
 (function () {
   'use strict';
@@ -379,15 +379,15 @@
     w.addEventListener(name, activity, { capture: true, passive: true });
   });
   // ── Bewegungsmelder (Kamera in der Erweiterung) ──
-  var MOTION_HOLD = 30000; // so lange nach der letzten Bewegung gilt sie noch
-  var motion = { on: false, level: 2 }, moving = false, stillTimer = null, camState = '';
+  var motion = { on: false, level: 2, hold: 30 }, moving = false, stillTimer = null, camState = ''; // hold: Rückstellzeit in Sekunden
 
   function tellCamera() {
-    try { document.dispatchEvent(new CustomEvent('visu-ext:camera', { detail: JSON.stringify(motion) })); } catch (e) { /* ohne Brücke */ }
+    try { document.dispatchEvent(new CustomEvent('visu-ext:camera', { detail: JSON.stringify({ on: motion.on, level: motion.level }) })); } catch (e) { /* ohne Brücke */ }
   }
   function setMotion(m) {
-    var next = { on: !!(m && m.on === true), level: m && (m.level === 1 || m.level === 3) ? m.level : 2 };
-    if (next.on === motion.on && next.level === motion.level) return;
+    var hold = m && typeof m.hold === 'number' && m.hold > 0 ? Math.min(Math.max(Math.round(m.hold), 5), 3600) : 30;
+    var next = { on: !!(m && m.on === true), level: m && (m.level === 1 || m.level === 3) ? m.level : 2, hold: hold };
+    if (next.on === motion.on && next.level === motion.level) { motion.hold = hold; return; } // die Kamera braucht nur an/aus und Stufe
     motion = next;
     if (!motion.on) {
       if (stillTimer) { clearTimeout(stillTimer); stillTimer = null; }
@@ -400,7 +400,7 @@
     if (!motion.on) return;
     if (saverLayer) wakeSaver(); else armSaver(); // wer davorsteht, will die Visu sehen; der Rücksprung läuft weiter
     if (stillTimer) clearTimeout(stillTimer);
-    stillTimer = setTimeout(function () { stillTimer = null; moving = false; if (open) raw({ t: 'motion', on: false }); }, MOTION_HOLD);
+    stillTimer = setTimeout(function () { stillTimer = null; moving = false; if (open) raw({ t: 'motion', on: false }); }, motion.hold * 1000);
     if (!moving) { moving = true; if (open) raw({ t: 'motion', on: true }); }
   }
   document.addEventListener('visu-ext:motion', function (ev) {
