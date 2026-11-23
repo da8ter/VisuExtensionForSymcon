@@ -23,7 +23,7 @@ const pruefe = (name, ist, soll) => {
 
 // ── Nachgespieltes Modul „Visu-Erweiterung“ (Vertrag 2) ─────────────────────────
 const KEY = 'ab'.repeat(24), ID = 'ab12cd34';
-const symcon = { gesperrt: false, anfragen: [] };
+const symcon = { gesperrt: false, anfragen: [], kamera: false };
 const srv = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   const json = (o) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); };
@@ -38,7 +38,10 @@ const srv = http.createServer((req, res) => {
   if (k === 'script') {
     // Die Laufzeit (m=0) antwortet später als das Modul: ausgeführt werden muss sie trotzdem zuerst.
     const m = u.searchParams.get('m');
-    return void setTimeout(() => js(`(window.__lauf = window.__lauf || []).push(${JSON.stringify(m)});`), m === '0' ? 250 : 0);
+    // Mit symcon.kamera spielt die Laufzeit den Bewegungsmelder nach: einschalten und Meldungen der Brücke sammeln.
+    const kamera = m === '0' && symcon.kamera ? `window.__bew = []; document.addEventListener('visu-ext:motion', (e) => window.__bew.push(JSON.parse(e.detail)));
+      window.__kamera = (on) => document.dispatchEvent(new CustomEvent('visu-ext:camera', { detail: JSON.stringify({ on: on, level: 2 }) })); window.__kamera(true);` : '';
+    return void setTimeout(() => js(`(window.__lauf = window.__lauf || []).push(${JSON.stringify(m)});` + kamera), m === '0' ? 250 : 0);
   }
   if (req.method !== 'POST') return status(404);
   let rumpf = '';
@@ -69,7 +72,7 @@ writeFileSync(join(ext, 'manifest.json'), JSON.stringify(manifest));
 // ── Chrome über die Protokoll-Pipe (nur so lässt sich eine entpackte Erweiterung laden) ─────────────
 const chrome = spawn(CHROME, ['--headless=new', '--no-first-run', '--no-default-browser-check', `--user-data-dir=${profil}`,
   '--remote-debugging-pipe', '--enable-unsafe-extension-debugging', '--host-resolver-rules=MAP symcon.test 127.0.0.1',
-  '--window-size=900,700', 'about:blank'], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'], detached: true });
+  '--window-size=900,700', '--use-fake-device-for-media-stream', 'about:blank'], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'], detached: true });
 const raus = chrome.stdio[3], rein = chrome.stdio[4];
 let id = 0, rest = '';
 const offen = new Map(), log = [];
@@ -144,6 +147,36 @@ try {
     await visu.ev('[typeof (window.chrome && window.chrome.storage), document.documentElement.outerHTML.includes(' + JSON.stringify(KEY) + ')]'), ['undefined', false]);
   pruefe('Visu: kein Verstoß gegen eine Sicherheitsrichtlinie', log.filter((t) => /Content Security Policy/i.test(t)).length, 0);
   await visu.zu();
+
+  // Bewegungsmelder: Kamera im Offscreen-Dokument der Erweiterung, Meldungen im Tab der Visu (Server über http, nicht localhost)
+  symcon.kamera = true;
+  const offscreen = () => opt.ev(`chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] }).then((l) => l.length)`);
+  const zustaende = (v) => v.ev('(window.__bew || []).filter((m) => m.t === "cam").map((m) => m.state)');
+  const bewegt = (v) => v.ev('(window.__bew || []).some((m) => m.t === "motion")');
+  const kv = await seite(ORIGIN + '/');
+  await sleep(2500);
+  pruefe('Bewegungsmelder in Symcon an, am Gerät nicht erlaubt: Zustand „blocked“, keine Kamera', [await zustaende(kv), await offscreen()], [['blocked'], 0]);
+  await opt.ev(`chrome.storage.local.set({ camera: true }).then(() => 1)`);
+  await sleep(2500);
+  pruefe('Erlaubt, aber im Browser nicht freigegeben: „denied“', (await zustaende(kv)).pop(), 'denied');
+  await send('Browser.grantPermissions', { origin: `chrome-extension://${geladen.id}`, permissions: ['videoCapture'] });
+  await opt.ev(`chrome.runtime.sendMessage({ to: 'background', camera: 'changed' }).then(() => 1, () => 1)`);
+  await sleep(3500);
+  pruefe('Freigegeben: Kamera läuft im Offscreen-Dokument, Bewegung kommt im Tab an (Testbild bewegt sich)',
+    [(await zustaende(kv)).pop(), await offscreen(), await bewegt(kv)], ['ok', 1, true]);
+  pruefe('Kein Kamerabild im Tab: nur Zustand und Bewegung', await kv.ev('window.__bew.every((m) => Object.keys(m).every((k) => k === "t" || k === "state"))'), true);
+  await kv.ev('window.__kamera(false)');
+  await sleep(4500);
+  pruefe('In Symcon ausgeschaltet: Offscreen-Dokument geschlossen, Kamera aus', await offscreen(), 0);
+  await kv.ev('window.__kamera(true)');
+  await sleep(2500);
+  pruefe('Wieder eingeschaltet: Kamera läuft wieder', await offscreen(), 1);
+  await kv.zu();
+  await sleep(4500);
+  pruefe('Visu geschlossen: Kamera aus', await offscreen(), 0);
+  await opt.ev(`chrome.storage.local.set({ camera: false }).then(() => 1)`);
+  await send('Browser.resetPermissions', {});
+  symcon.kamera = false;
 
   const konsole = await seite(ORIGIN + '/console/');
   await sleep(1200);

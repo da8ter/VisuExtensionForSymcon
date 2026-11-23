@@ -7,6 +7,7 @@ require_once __DIR__ . '/../libs/VisuExtDevices.php';
 require_once __DIR__ . '/../libs/VisuExtChannel.php';
 require_once __DIR__ . '/../libs/VisuExtDock.php';
 require_once __DIR__ . '/../libs/VisuExtMedia.php';
+require_once __DIR__ . '/../libs/VisuExtMotion.php';
 
 /**
  * Visu-Erweiterung: die eine Verbindung zwischen Symcon und der Browser-Erweiterung (Vertrag 2).
@@ -28,8 +29,9 @@ class VisuExtension extends IPSModuleStrict
     use VisuExtChannel;
     use VisuExtDock;
     use VisuExtMedia;
+    use VisuExtMotion;
 
-    public const VERSION = '0.2';
+    public const VERSION = '0.3';
 
     private const MODULE_ID = '{CB9C6C38-9B97-45CA-BFB5-EC7F936AF3FF}';
     private const WEBHOOK_CONTROL = '{015A6EB8-D6E5-4B93-B496-0D3F77AE9FE1}';
@@ -46,6 +48,7 @@ class VisuExtension extends IPSModuleStrict
         // Kennung => {name, secret (Hash des Geräteschlüssels), blocked, created, seen, deny[]}
         $this->RegisterAttributeString('Devices', '{}');
         $this->RegisterAttributeString('VariableIdents', '[]');
+        $this->RegisterAttributeString('MotionIdents', '[]');
 
         $this->RegisterTimer('Sweep', 0, 'IPS_RequestAction($_IPS[\'TARGET\'], \'Sweep\', 0);');
 
@@ -76,6 +79,7 @@ class VisuExtension extends IPSModuleStrict
         // Flüchtig: Symcon vergisst den Hook beim Neustart
         $this->RegisterHook(self::HOOK);
         $this->maintainDeviceVariables();
+        $this->maintainMotionVariables();
         $this->SetTimerInterval('Sweep', $this->sessions() === [] ? 0 : VisuExtCore::BEAT_SECONDS * 1000);
         $this->refreshPresence();
         $this->SetStatus(IS_ACTIVE);
@@ -174,7 +178,7 @@ class VisuExtension extends IPSModuleStrict
                 ['type' => 'Label', 'caption' => 'Connects the browser extension "Visu-Erweiterung für Symcon" with this Symcon. Each browser is paired once; other modules dock onto this instance and need no connection of their own.'],
                 ['type' => 'CheckBox', 'name' => 'DeviceVariables', 'caption' => 'Create a variable "online" for each device'],
             ],
-            'actions'  => array_merge($actions, $this->kioskPanels()),
+            'actions'  => array_merge($actions, $this->kioskPanels(), [$this->motionPanel()]),
             'status'   => [
                 ['code' => IS_ACTIVE, 'icon' => 'active', 'caption' => 'Active'],
                 ['code' => self::STATUS_SECOND_INSTANCE, 'icon' => 'error', 'caption' => 'There is already an instance of this module. Only one per Symcon is possible.'],

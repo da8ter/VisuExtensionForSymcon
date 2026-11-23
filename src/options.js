@@ -109,6 +109,30 @@
     }).catch(function (e) { meldung.textContent = String((e && e.message) || e); });
   });
 
+  // ── Bewegungsmelder: Zustimmung an diesem Gerät (chrome.storage „camera“) und Freigabe der Kamera.
+  // Die Abfrage muss hier im Klick kommen: Das Offscreen-Dokument, in dem die Kamera später läuft, kann nicht fragen.
+  var kamera = document.getElementById('kamera'), kameraStatus = document.getElementById('kameraStatus');
+  function kameraMelden() {
+    if (globalThis.chrome && chrome.runtime && chrome.runtime.sendMessage) chrome.runtime.sendMessage({ to: 'background', camera: 'changed' }).catch(function () {});
+  }
+  function kameraZeigen(fehlerText) {
+    kameraStatus.textContent = fehlerText || t(kamera.checked ? 'camOn' : 'camOff');
+  }
+  kamera.addEventListener('change', function () {
+    if (!kamera.checked) {
+      chrome.storage.local.set({ camera: false }).then(function () { kameraZeigen(); kameraMelden(); });
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(function (s) {
+      s.getTracks().forEach(function (tr) { tr.stop(); });
+      return chrome.storage.local.set({ camera: true }).then(function () { kameraZeigen(); kameraMelden(); });
+    }, function (e) {
+      kamera.checked = false;
+      kameraZeigen(t(e && e.name === 'NotAllowedError' ? 'camDenied' : 'camMissing'));
+    });
+  });
+  chrome.storage.local.get('camera').then(function (r) { kamera.checked = !!(r && r.camera === true); kameraZeigen(); });
+
   chrome.storage.local.get('connections').then(function (r) {
     // Einträge einer früheren Fassung (Vertrag 1) passen nicht mehr und fallen hier weg.
     verbindungen = Array.isArray(r.connections) ? r.connections.map(core.checkConnection).filter(Boolean) : [];

@@ -51,6 +51,10 @@ trait VisuExtChannel
                     $this->push($addr, $port, ['t' => 'msg', 'm' => $module, 'data' => $reply]);
                 }
                 return;
+            case 'motion': // Bewegungsmelder: Bewegung an/aus und Zustand der Kamera
+            case 'cam':
+                $this->motionFrame($addr, $port, $wsKey, $msg);
+                return;
             case 'pic': // Bildschirmschoner mit eigenen Bildern: das nächste Bild
                 [$state, $session, $device] = $this->checkSession($addr, $port, $wsKey, null);
                 $this->push($addr, $port, $state === 'ok' ? $this->picture((string) $session['d'], $device, $msg['seen'] ?? null) : ['t' => $state]);
@@ -150,6 +154,7 @@ trait VisuExtChannel
         }
         if ($gone !== []) {
             $this->refreshPresence();
+            $this->resetMotion();
         }
     }
 
@@ -177,6 +182,9 @@ trait VisuExtChannel
         }) ?? [];
         foreach ($dropped as $session) {
             $this->push((string) $session['a'], (int) $session['p'], ['t' => 'denied']);
+        }
+        if ($dropped !== []) {
+            $this->resetMotion();
         }
     }
 
@@ -206,6 +214,7 @@ trait VisuExtChannel
         return [
             'home'  => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
             'saver' => VisuExtCore::saverOf($device['saver'] ?? null),
+            'motion' => VisuExtCore::motionOf($device['motion'] ?? null),
         ];
     }
 

@@ -26,6 +26,11 @@
  * kurz gültige Adresse am Hook; geladen wird in Stücken, weil Symcon die Ausgabe eines Hooks begrenzt). Eigene Elemente am body liegen über der Visualisierung und fangen Zeiger ab
  * (gemessen 10.11.2026): Die erste Berührung weckt deshalb nur auf und löst in der Visu nichts aus.
  * Abschalten oder dimmen kann eine Seite das Display nicht, nur abdunkeln.
+ *
+ * Und der Bewegungsmelder (C.motion, „cfg“): Die Kamera läuft nicht hier, sondern in der Erweiterung
+ * (eine Seite über http darf sie nicht öffnen). Die Laufzeit nennt der Brücke die Einstellung
+ * (DOM-Ereignis „visu-ext:camera“) und bekommt Bewegungen zurück („visu-ext:motion“): Sie wecken den
+ * Bildschirmschoner und gehen als „motion“ an Symcon, nach MOTION_HOLD ohne Bewegung als Ende.
  */
 (function () {
   'use strict';
@@ -83,6 +88,7 @@
         if (typeof m.name === 'string') api.device.name = m.name;
         setOpen(true);
         queue.splice(0).forEach(raw);
+        if (motion.on) { raw({ t: 'motion', on: moving }); if (camState) raw({ t: 'cam', state: camState }); } // Symcon setzt beim Trennen zurück
         break;
       case 'unknown': // Symcon kennt die Sitzung nicht mehr (Modul neu geladen): neu anmelden
         setOpen(false);
@@ -95,6 +101,7 @@
       case 'cfg': // Einstellungen des Geräts aus dem Modul, auch nachträglich geändert
         setHome(m.home);
         setSaver(m.saver);
+        setMotion(m.motion);
         break;
       case 'saver': // aus Symcon: sofort einschalten oder aufwecken
         if (m.on === true) startSaver(); else wakeSaver();
@@ -371,8 +378,46 @@
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (name) {
     w.addEventListener(name, activity, { capture: true, passive: true });
   });
+  // ── Bewegungsmelder (Kamera in der Erweiterung) ──
+  var MOTION_HOLD = 30000; // so lange nach der letzten Bewegung gilt sie noch
+  var motion = { on: false, level: 2 }, moving = false, stillTimer = null, camState = '';
+
+  function tellCamera() {
+    try { document.dispatchEvent(new CustomEvent('visu-ext:camera', { detail: JSON.stringify(motion) })); } catch (e) { /* ohne Brücke */ }
+  }
+  function setMotion(m) {
+    var next = { on: !!(m && m.on === true), level: m && (m.level === 1 || m.level === 3) ? m.level : 2 };
+    if (next.on === motion.on && next.level === motion.level) return;
+    motion = next;
+    if (!motion.on) {
+      if (stillTimer) { clearTimeout(stillTimer); stillTimer = null; }
+      moving = false;
+      camState = '';
+    }
+    tellCamera();
+  }
+  function moved() {
+    if (!motion.on) return;
+    if (saverLayer) wakeSaver(); else armSaver(); // wer davorsteht, will die Visu sehen; der Rücksprung läuft weiter
+    if (stillTimer) clearTimeout(stillTimer);
+    stillTimer = setTimeout(function () { stillTimer = null; moving = false; if (open) raw({ t: 'motion', on: false }); }, MOTION_HOLD);
+    if (!moving) { moving = true; if (open) raw({ t: 'motion', on: true }); }
+  }
+  document.addEventListener('visu-ext:motion', function (ev) {
+    var m;
+    try { m = JSON.parse(ev.detail); } catch (e) { return; }
+    if (!m || typeof m !== 'object') return;
+    if (m.t === 'motion') moved();
+    else if (m.t === 'cam' && motion.on && typeof m.state === 'string' && m.state !== camState) {
+      camState = m.state.slice(0, 20);
+      if (open) raw({ t: 'cam', state: camState });
+    }
+  });
+  document.addEventListener('visu-ext:camera-ask', tellCamera);
+
   setHome(C.home);
   setSaver(C.saver);
+  setMotion(C.motion);
 
   // Zurück im Vordergrund oder wieder im Netz: nicht auf den nächsten Versuch warten
   function wake() {

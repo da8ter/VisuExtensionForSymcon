@@ -1,6 +1,6 @@
 # Vertrag 2: das Modul „Visu-Erweiterung“
 
-Stand: 20.11.2026. Das Symcon-Modul in diesem Repo (`VisuExtension/`, Präfix `VISUEXT`) und die Browser-Erweiterung in `src/` (ab 0.2) sprechen diese Fassung. Vertrag 1 gibt es nicht mehr.
+Stand: 23.11.2026. Das Symcon-Modul in diesem Repo (`VisuExtension/`, Präfix `VISUEXT`) und die Browser-Erweiterung in `src/` (ab 0.2) sprechen diese Fassung; den Bewegungsmelder gibt es ab 0.3. Vertrag 1 gibt es nicht mehr.
 
 Die Erweiterung verbindet sich je Server mit genau einer Instanz „Visu-Erweiterung“. Andere Module docken in Symcon an diese Instanz an. Sie brauchen keinen eigenen Hook, keinen eigenen Schlüssel und kein Adressfeld.
 
@@ -50,11 +50,13 @@ WebSocket auf `ws(s)://<Server der Visualisierung>/hook/visuext`. Die Laufzeit m
 | | `{t:"beat", page}` | Lebenszeichen alle 30 s |
 | | `{t:"ev", m, data}` | Ereignis an das Modul `m` |
 | | `{t:"pic", seen}` | Bildschirmschoner mit eigenen Bildern: das nächste Bild, `seen` = in dieser Runde schon gezeigte Medienobjekte |
+| | `{t:"motion", on}` | Bewegungsmelder: Bewegung beginnt (`true`) bzw. endet nach 30 s ohne Bewegung (`false`); nach jeder Anmeldung einmal der Stand |
+| | `{t:"cam", state}` | Zustand der Kamera: `ok`, `blocked` (am Gerät nicht erlaubt), `denied` (im Browser nicht freigegeben), `nocam`, `error` |
 | Symcon → Gerät | `{t:"welcome", name, beat}` | angemeldet |
 | | `{t:"denied"}` | Gerät entfernt oder gesperrt: nicht weiter versuchen |
 | | `{t:"unknown"}` | Sitzung unbekannt (Modul neu geladen): neu anmelden |
 | | `{t:"beat"}` | Antwort auf das Lebenszeichen |
-| | `{t:"cfg", home:{minutes, page}, saver:{minutes, mode, interval, fill, category}}` | Einstellungen des Geräts: nach jeder Anmeldung und bei jeder Änderung |
+| | `{t:"cfg", home:{minutes, page}, saver:{minutes, mode, interval, fill, category}, motion:{on, level}}` | Einstellungen des Geräts: nach jeder Anmeldung und bei jeder Änderung |
 | | `{t:"saver", on}` | Bildschirmschoner sofort einschalten oder aufwecken |
 | | `{t:"pic", i, reset, u}` | Antwort: Medienobjekt, ob eine neue Runde beginnt, Adresse des Bildes; ohne `u` gibt es keines |
 | | `{t:"msg", m, data}` | Nachricht des Moduls `m` |
@@ -71,6 +73,10 @@ Die Adresse kommt aus der Antwort `pic`, ist wie eine Skript-Adresse unterschrie
 
 Bleibt das Lebenszeichen 90 Sekunden aus, gilt die Verbindung für Symcon als getrennt. Bleibt die Antwort zweieinhalb Takte aus, baut die Laufzeit die Verbindung neu auf (nach 1, 2, 5, 10, dann alle 30 Sekunden). Über Symcon Connect hält das Lebenszeichen die Verbindung zugleich offen: Connect trennt nach 120 Sekunden ohne Daten.
 
+### Bewegungsmelder in der Erweiterung
+
+Die Kamera läuft im Offscreen-Dokument der Erweiterung (`src/camera.html`), nicht in der Visualisierung: Der Browser gibt die Kamera nur sicheren Seiten, eine Visualisierung über `http://` ist keine, die Seiten der Erweiterung schon. Der Weg: Die Laufzeit nennt der Brücke die Einstellung (DOM-Ereignis `visu-ext:camera`, `{on, level}`); hat das Gerät in der Einrichtung zugestimmt (`chrome.storage.local.camera`), öffnet die Brücke einen Port `camera` zum Hintergrunddienst. Solange ein Port offen ist, läuft das Offscreen-Dokument; seine Meldungen (`motion`, `cam`) gehen an alle diese Tabs und von der Brücke an die Laufzeit (`visu-ext:motion`). Die Kamera liefert höchstens 160 × 120 Pixel mit 5 Bildern je Sekunde; verglichen werden drei Bilder je Sekunde als Graubild mit 64 × 48 Pixeln (`src/motion.js`). Bewegung heißt: Nach Abzug der allgemeinen Helligkeitsänderung weichen mindestens 6 / 3 / 1,2 % der Pixel deutlich ab (Empfindlichkeit gering / mittel / hoch). Eine Bewegung weckt den Bildschirmschoner und stellt seine Frist neu, nicht die des Rücksprungs.
+
 ## Im Formular der Instanz
 
 - **Geräte:** Name, Kennung, Zustand, zuletzt gesehen, aktuelle Seite. Umbenennen, sperren, entfernen.
@@ -78,9 +84,10 @@ Bleibt das Lebenszeichen 90 Sekunden aus, gilt die Verbindung für Symcon als ge
 - **Zurück zur Startseite** je Gerät: Nach den eingestellten Minuten ohne Berührung, Taste oder Mausrad wechselt die Visualisierung zurück auf ihre Startseite (0 = aus). Ohne eigene Angabe ist das die Seite, mit der sie geladen wurde; sonst die Adresse wie in der Spalte „Seite“, zum Beispiel `/#/12345`. Die Laufzeit misst die Bedienpause im Browser und wechselt über den Adress-Anhang; die Einstellung wirkt sofort, auch auf einer geöffneten Visualisierung.
 - **Bildschirmschoner** je Gerät: Nach den eingestellten Minuten ohne Bedienung legt sich eine Ebene über die Visualisierung, schwarz, mit Uhr und Datum (die Uhr wandert jede Minute), mit Kunstwerken oder mit eigenen Bildern im Wechsel. Eigene Bilder sind Bild-Medienobjekte aus einer Kategorie, die je Gerät gewählt wird; sie kommen über den Hook aus Symcon, in zufälliger Reihenfolge und ohne Beschriftung. Die Kunstwerke sind gemeinfreie Gemälde aus `libs/artworks.json`; der Browser lädt die Bilder direkt bei Wikimedia Commons, wahlweise mit schwarzem Rand oder bildschirmfüllend beschnitten, mit Titel, Künstler und Jahr am unteren Rand. Ohne Netz, ohne Verbindung zu Symcon oder mit leerer Kategorie erscheint die Uhr. Die erste Berührung weckt nur auf und löst in der Visualisierung nichts aus. Aus Symcon lässt er sich einschalten und aufwecken; angedockte Module wecken mit `ext.wake()`. Das Display abschalten oder dimmen kann er nicht, nur abdunkeln.
 - Rücksprung und Bildschirmschoner haben im Formular je einen eigenen Aufklappbereich.
+- **Bewegungsmelder** je Gerät: an oder aus, Empfindlichkeit, Zustand der Kamera. Eingeschaltet gibt es die Variable „Bewegung“ des Geräts; sie geht aus, wenn die Bewegung endet oder das Gerät die Verbindung verliert.
 - Auf Wunsch je Gerät eine Variable „online“. Die Variable „Verbundene Geräte“ gibt es immer.
 
-Funktionen für Skripte: `VISUEXT_StartPairing`, `VISUEXT_GetDevices`, `VISUEXT_UpdateDevice`, `VISUEXT_RemoveDevice`, `VISUEXT_SetModuleAllowed`, `VISUEXT_SetReturnHome` (Gerät, Minuten, Startseite), `VISUEXT_SetScreensaver` (Gerät, Minuten, `black`, `clock`, `art` oder `media`), `VISUEXT_SetScreensaverArt` (Gerät, Bildwechsel in Minuten, bildschirmfüllend; gilt für Kunstwerke und eigene Bilder), `VISUEXT_SetScreensaverMedia` (Gerät, Kategorie der eigenen Bilder), `VISUEXT_Wake` und `VISUEXT_StartScreensaver` (Gerät oder `''` für alle).
+Funktionen für Skripte: `VISUEXT_StartPairing`, `VISUEXT_GetDevices`, `VISUEXT_UpdateDevice`, `VISUEXT_RemoveDevice`, `VISUEXT_SetModuleAllowed`, `VISUEXT_SetReturnHome` (Gerät, Minuten, Startseite), `VISUEXT_SetScreensaver` (Gerät, Minuten, `black`, `clock`, `art` oder `media`), `VISUEXT_SetScreensaverArt` (Gerät, Bildwechsel in Minuten, bildschirmfüllend; gilt für Kunstwerke und eigene Bilder), `VISUEXT_SetScreensaverMedia` (Gerät, Kategorie der eigenen Bilder), `VISUEXT_SetMotion` (Gerät, an, Empfindlichkeit 1–3), `VISUEXT_Wake` und `VISUEXT_StartScreensaver` (Gerät oder `''` für alle).
 
 Je Symcon ist eine Instanz möglich; eine zweite meldet einen Fehlerstatus.
 
@@ -90,6 +97,7 @@ Je Symcon ist eine Instanz möglich; eine zweite meldet einen Fehlerstatus.
 php tests/modul/module_test.php   # Modul gegen eine SDK-Attrappe
 node tests/runtime_test.mjs       # Laufzeit mit nachgestelltem Fenster, WebSocket und Uhr
 node tests/core_test.mjs          # Prüfregeln der Erweiterung
+node tests/motion_test.mjs        # Bewegungserkennung mit erzeugten Bildern
 node tests/inject_test.mjs        # Lader und Brücke in Headless-Chrome
 node tests/options_test.mjs       # Einrichtung (koppeln), Chrome-Schnittstellen als Attrappe
 node tests/extension_test.mjs     # die echte Erweiterung, Server nicht unter localhost

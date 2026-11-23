@@ -24,6 +24,9 @@
   .zeile .ort, .zeile .status { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
   .zeile .status.ok { color: var(--akzent); }
   .zeile .status.fehler { color: var(--rot); }
+  h2 { font-size: 17px; margin: 28px 0 4px; }
+  .schalter { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-weight: 650; }
+  .schalter input { width: 18px; height: 18px; }
   .leer { color: var(--muted); padding: 14px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
 </style>
 </head>
@@ -43,6 +46,10 @@
 <div id="meldung" role="alert"></div>
 <div id="liste"></div>
 <p class="muted" data-i18n="optReload"></p>
+<h2 data-i18n="camTitle"></h2>
+<p class="muted" data-i18n="camIntro"></p>
+<label class="schalter"><input id="kamera" type="checkbox"> <span data-i18n="camAllow"></span></label>
+<div id="kameraStatus" class="muted" role="status"></div>
 <p class="muted" data-i18n="optTrust"></p>
 <script src="core.js"></script>
 <script src="register.js"></script>

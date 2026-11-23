@@ -37,6 +37,7 @@ trait VisuExtDevices
         if ($found) {
             $this->dropSessions($DeviceID);
             $this->maintainDeviceVariables();
+            $this->maintainMotionVariables();
             $this->refreshPresence();
         }
         return (bool) $found;
@@ -161,7 +162,7 @@ trait VisuExtDevices
         });
     }
 
-    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode, interval, fill, category}. Ohne Schlüssel. */
+    /** Geräte als JSON: id, name, online, blocked, seen (Unix-Zeit), page, home {minutes, page}, saver {minutes, mode, interval, fill, category}, motion {on, level}. Ohne Schlüssel. */
     public function GetDevices(): string
     {
         return (string) json_encode($this->deviceList(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -261,6 +262,7 @@ trait VisuExtDevices
                 'page'    => isset($online[$id]) ? $online[$id]['page'] : '',
                 'home'    => VisuExtCore::cleanHome($device['home']['minutes'] ?? 0, $device['home']['page'] ?? ''),
                 'saver'   => VisuExtCore::saverOf($device['saver'] ?? null),
+                'motion'  => VisuExtCore::motionOf($device['motion'] ?? null),
             ];
         }
         return $list;

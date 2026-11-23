@@ -30,7 +30,7 @@ function element(tag = 'div', merke = null) {
 /** Fenster mit stellbarer Uhr; `sockets` sind alle geöffneten Verbindungen in Reihenfolge. */
 function welt() {
   let jetzt = 1_000_000, lauf = 0;
-  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [], erzeugt = [], abrufe = [], antworten = [], blobs = [], frei = [];
+  const timer = new Map(), sockets = [], horcher = {}, gewechselt = [], erzeugt = [], abrufe = [], antworten = [], blobs = [], frei = [], gefeuert = [];
   class Socket {
     constructor(url) { this.url = url; this.gesendet = []; this.zu = false; sockets.push(this); }
     send(text) { if (this.zu) throw new Error('zu'); this.gesendet.push(JSON.parse(text)); }
@@ -43,7 +43,9 @@ function welt() {
   const win = {
     WebSocket: Socket,
     location: { origin: 'http://symcon.test:3777', pathname: '/', hash: '#/kueche', assign: (ziel) => { gewechselt.push(ziel); } },
-    document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); }, body: element(), createElement: (t) => element(t, erzeugt) },
+    document: { hidden: false, addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); }, body: element(), createElement: (t) => element(t, erzeugt),
+      dispatchEvent: (ev) => { gefeuert.push([ev.type, ev.detail]); (horcher[ev.type] || []).forEach((f) => f(ev)); return true; } },
+    CustomEvent: class { constructor(type, o) { this.type = type; this.detail = o && o.detail; } },
     addEventListener: (n, f) => { (horcher[n] = horcher[n] || []).push(f); },
     setTimeout: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms }); return lauf; },
     setInterval: (f, ms) => { timer.set(++lauf, { f, um: jetzt + ms, alle: ms }); return lauf; },
@@ -79,7 +81,9 @@ function welt() {
     jetzt = ziel;
   };
   const melde = (n) => (horcher[n] || []).forEach((f) => f({ type: n }));
-  return { win, sockets, lade, vor, melde, gewechselt, erzeugt, abrufe, antworten, blobs, frei };
+  /** Die Brücke meldet etwas an die Laufzeit (DOM-Ereignis „visu-ext:motion“). */
+  const bruecke = (o) => (horcher['visu-ext:motion'] || []).forEach((f) => f({ type: 'visu-ext:motion', detail: JSON.stringify(o) }));
+  return { win, sockets, lade, vor, melde, gewechselt, erzeugt, abrufe, antworten, blobs, frei, gefeuert, bruecke };
 }
 
 // ── Start, Warteliste, Anmeldung ──
@@ -275,6 +279,53 @@ function welt() {
   melde('pointerdown');
   vor(7200000);
   pruefe('Ausgeschaltet: kein Bildschirmschoner von selbst', ebene(), null);
+}
+
+// ── Bewegungsmelder ──
+{
+  const { win, sockets, lade, vor, melde, gefeuert, bruecke } = welt();
+  const kamera = () => gefeuert.filter((g) => g[0] === 'visu-ext:camera').map((g) => JSON.parse(g[1]));
+  lade({ saver: { minutes: 3, mode: 'clock' } });
+  const ebene = () => win.document.body.children.find((k) => k.attrs['data-visuext'] === 'saver') || null;
+  pruefe('Bewegungsmelder aus: der Brücke wird nichts gesagt', kamera(), []);
+  const s = sockets[0];
+  // Uhr vorstellen und dabei die Lebenszeichen beantworten, sonst baut die Laufzeit die Verbindung ab
+  const lebe = (ms) => { while (ms > 0) { const d = Math.min(ms, 10000); vor(d); ms -= d; if (!s.zu) s.empfange({ t: 'beat' }); } };
+  s.oeffne();
+  s.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  bruecke({ t: 'motion' });
+  pruefe('Ausgeschaltet: Bewegungen der Brücke bleiben folgenlos', s.gesendet.filter((m) => m.t === 'motion'), []);
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 3, mode: 'clock' }, motion: { on: true, level: 3 } });
+  pruefe('Eingeschaltet: die Brücke erfährt es mit der Empfindlichkeit', kamera(), [{ on: true, level: 3 }]);
+  s.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 3, mode: 'clock' }, motion: { on: true, level: 3 } });
+  gefeuert.length = 0;
+  win.document.dispatchEvent({ type: 'visu-ext:camera-ask' });
+  pruefe('Unverändert: nichts neu; auf Nachfrage der Brücke noch einmal', kamera(), [{ on: true, level: 3 }]);
+  melde('pointerdown');
+  lebe(181000);
+  pruefe('Bildschirmschoner läuft', ebene() !== null, true);
+  bruecke({ t: 'motion' });
+  pruefe('Bewegung: weckt den Bildschirmschoner und meldet Symcon den Beginn', [ebene(), s.gesendet.filter((m) => m.t === 'motion')], [null, [{ t: 'motion', on: true }]]);
+  lebe(20000);
+  bruecke({ t: 'motion' });
+  lebe(29000);
+  pruefe('Weitere Bewegung: kein neuer Beginn, die Nachlaufzeit beginnt neu', s.gesendet.filter((m) => m.t === 'motion').length, 1);
+  lebe(1500);
+  pruefe('30 s ohne Bewegung: Ende an Symcon', s.gesendet.filter((m) => m.t === 'motion').pop(), { t: 'motion', on: false });
+  lebe(152000);
+  pruefe('Bewegung hält den Bildschirmschoner nur hin: ohne weitere Bewegung kommt er wieder', ebene() !== null, true);
+  bruecke({ t: 'cam', state: 'denied' });
+  bruecke({ t: 'cam', state: 'denied' });
+  pruefe('Zustand der Kamera geht an Symcon, nur bei Änderung', s.gesendet.filter((m) => m.t === 'cam'), [{ t: 'cam', state: 'denied' }]);
+  s.reisse();
+  vor(1000);
+  const s2 = sockets[1];
+  s2.oeffne();
+  s2.empfange({ t: 'welcome', name: 'Küche', beat: 30 });
+  pruefe('Nach dem Neuverbinden: Stand der Bewegung und der Kamera noch einmal', s2.gesendet.filter((m) => m.t === 'motion' || m.t === 'cam'), [{ t: 'motion', on: false }, { t: 'cam', state: 'denied' }]);
+  gefeuert.length = 0;
+  s2.empfange({ t: 'cfg', home: { minutes: 0, page: '' }, saver: { minutes: 3, mode: 'clock' }, motion: { on: false, level: 3 } });
+  pruefe('Ausgeschaltet: die Brücke erfährt es (Kamera aus)', kamera(), [{ on: false, level: 3 }]);
 }
 
 // ── Bildschirmschoner mit Kunstwerken ──

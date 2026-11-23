@@ -100,5 +100,26 @@
     },
     "errNoManifest": {
         "message": "Not connected. $1"
+    },
+    "camTitle": {
+        "message": "Motion detector"
+    },
+    "camIntro": {
+        "message": "The camera of this device can wake the screensaver and report motion to Symcon. It is switched on per device in the form of the instance \"Visu Extension\"; here you consent for this device. The images stay in the extension: Symcon only learns \"motion\" or \"no motion\". While the camera runs, the browser shows it."
+    },
+    "camAllow": {
+        "message": "Allow the camera as motion detector"
+    },
+    "camOn": {
+        "message": "Allowed. The camera runs as soon as the motion detector is switched on for this device in Symcon and the visualization is open."
+    },
+    "camOff": {
+        "message": "Not allowed: the camera stays off even if the motion detector is switched on in Symcon."
+    },
+    "camDenied": {
+        "message": "The browser did not grant the camera. Allow the camera in the site settings of the extension and try again."
+    },
+    "camMissing": {
+        "message": "No camera found, or another program is using it."
     }
 }

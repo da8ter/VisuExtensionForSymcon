@@ -52,7 +52,23 @@
             "Image fills the screen": "Bild füllt den Bildschirm",
             "Own images": "Eigene Bilder",
             "Category of own images": "Kategorie der eigenen Bilder",
-            "Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown.": "Eigene Bilder: Bild-Medienobjekte aus der gewählten Kategorie in zufälliger Reihenfolge, auch aus Unterkategorien und über Verknüpfungen. Bilder über 15 MB werden übersprungen; ohne Bilder erscheint die Uhr."
+            "Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown.": "Eigene Bilder: Bild-Medienobjekte aus der gewählten Kategorie in zufälliger Reihenfolge, auch aus Unterkategorien und über Verknüpfungen. Bilder über 15 MB werden übersprungen; ohne Bilder erscheint die Uhr.",
+            "%s motion": "%s Bewegung",
+            "No motion": "Keine Bewegung",
+            "Motion": "Bewegung",
+            "running": "läuft",
+            "not allowed in the extension on this device": "in der Erweiterung auf diesem Gerät nicht erlaubt",
+            "camera not granted in the browser": "Kamera im Browser nicht freigegeben",
+            "no camera": "keine Kamera",
+            "error": "Fehler",
+            "Motion detector": "Bewegungsmelder",
+            "Sensitivity": "Empfindlichkeit",
+            "Low": "Gering",
+            "Medium": "Mittel",
+            "High": "Hoch",
+            "Camera": "Kamera",
+            "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.": "Die Kamera des Geräts weckt den Bildschirmschoner und setzt die Variable „Bewegung“ des Geräts (nach 30 Sekunden ohne Bewegung wieder aus). Die Kamera läuft in der Browser-Erweiterung; Bilder verlassen das Gerät nie.",
+            "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Braucht die Zustimmung am Gerät: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Browser-Erweiterung. Wirkt nur, solange das Display an ist."
         },
         "en": {
             "Visu Extension": "Visu Extension",
@@ -106,7 +122,23 @@
             "Image fills the screen": "Image fills the screen",
             "Own images": "Own images",
             "Category of own images": "Category of own images",
-            "Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown.": "Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown."
+            "Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown.": "Own images: image media objects from the chosen category in random order, including subcategories and links. Images above 15 MB are skipped; without images the clock is shown.",
+            "%s motion": "%s motion",
+            "No motion": "No motion",
+            "Motion": "Motion",
+            "running": "running",
+            "not allowed in the extension on this device": "not allowed in the extension on this device",
+            "camera not granted in the browser": "camera not granted in the browser",
+            "no camera": "no camera",
+            "error": "error",
+            "Motion detector": "Motion detector",
+            "Sensitivity": "Sensitivity",
+            "Low": "Low",
+            "Medium": "Medium",
+            "High": "High",
+            "Camera": "Camera",
+            "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.": "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device (off again after 30 seconds without motion). The camera runs in the browser extension; images never leave the device.",
+            "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on."
         }
     }
 }

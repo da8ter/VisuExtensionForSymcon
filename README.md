@@ -46,12 +46,14 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 - **Geräte:** jeder verbundene Browser mit Name, Zustand, zuletzt gesehen und aktueller Seite. Umbenennen, sperren, entfernen.
 - **Zurück zur Startseite:** je Gerät einstellbar. Nach den eingestellten Minuten ohne Bedienung wechselt die Visualisierung dort zurück auf ihre Startseite, zum Beispiel an einem Wandtablett.
 - **Bildschirmschoner:** je Gerät einstellbar: schwarz, mit Uhr, mit berühmten Kunstwerken im Wechsel (57 gemeinfreie Gemälde) oder mit eigenen Bildern: Bild-Medienobjekte aus einer Kategorie in Symcon, die ihr je Gerät wählt, in zufälliger Reihenfolge (auch aus Unterkategorien und über Verknüpfungen, je Bild bis 15 MB). Bilder wahlweise bildschirmfüllend. Die eigenen Bilder kommen aus eurem Symcon und verlassen das Haus nicht. Die Kunstwerke lädt der Browser direkt bei Wikimedia Commons; das Gerät braucht dafür Internet, und Wikimedia sieht seine Adresse. Die erste Berührung weckt nur auf; aus Symcon lässt er sich einschalten und aufwecken (`VISUEXT_StartScreensaver`, `VISUEXT_Wake`), etwa über einen Bewegungsmelder.
+- **Bewegungsmelder:** je Gerät einstellbar, mit drei Stufen der Empfindlichkeit. Die Kamera des Geräts weckt den Bildschirmschoner, sobald jemand davorsteht, und setzt die Variable „Bewegung“ des Geräts; nach 30 Sekunden ohne Bewegung geht sie wieder aus. Damit taugt das Wandtablett auch als Präsenzmelder für Licht oder Ereignisse. Zusätzlich muss man am Gerät selbst zustimmen: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Erweiterung, dabei fragt der Browser nach der Kamera. Die Kamera läuft in der Erweiterung, nicht in der Visualisierung, deshalb klappt es auch, wenn die Visualisierung über `http://` im Heimnetz geöffnet ist. Die Erkennung braucht kaum Rechenzeit: Die Kamera liefert ein kleines Bild mit höchstens 5 Bildern je Sekunde, verglichen werden drei je Sekunde.
 - **Angedockte Module** und, sobald es mehrere gibt, welches Modul auf welchem Gerät läuft (Vorgabe: jedes auf jedem).
 - Die Variable „Verbundene Geräte“ gibt es immer, auf Wunsch je Gerät eine Variable „online“.
 
 ## Grenzen
 
 - Nur in dem Browser, in dem die Erweiterung installiert ist. Nicht in der Symcon-App, nicht auf iPhone und iPad, nicht in Chrome für Android.
+- Der Bewegungsmelder arbeitet nur, solange das Display an ist. Schaltet das Betriebssystem den Bildschirm ab, ruht der Browser und mit ihm die Kamera; der Bildschirmschoner dunkelt dagegen nur ab. Solange die Kamera läuft, zeigt der Browser das an.
 - Die Erweiterung steht nicht im Chrome Web Store. Der Store erlaubt nachgeladenen Code nur in engen Grenzen, und genau das ist hier die Aufgabe.
 
 ## Sicherheit
@@ -62,6 +64,7 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 - Der Schlüssel eines Browsers entsteht beim Verbinden, bleibt in diesem Browser gespeichert und wird nicht synchronisiert. Symcon speichert nur seinen Hash. Er steht in keiner Adresse und ist für die Seite der Visualisierung nicht erreichbar.
 - In Symcon kannst du jeden Browser einzeln sperren oder entfernen. Er lädt dann nichts mehr.
 - Der Hook des Moduls ist wie jeder Hook ohne das Passwort der Visualisierung erreichbar. Ohne gültigen Code oder Schlüssel antwortet er mit „verboten“.
+- Bewegungsmelder: Kein Kamerabild verlässt die Erweiterung. Sie vergleicht die Bilder selbst und meldet der Visualisierung und Symcon nur „Bewegung“, „keine Bewegung“ und den Zustand der Kamera. Ohne die Zustimmung in der Einrichtung bleibt die Kamera aus, auch wenn Symcon den Bewegungsmelder einschaltet.
 - Die Erweiterung arbeitet nur im obersten Fenster der Visualisierung, nicht in Kacheln, nicht in der Verwaltungskonsole.
 
 ## Für Modulhersteller
@@ -74,6 +77,7 @@ Ein Modul dockt in Symcon über den Datenfluss an die Visu-Erweiterung an: Es li
 php tests/modul/module_test.php  # Symcon-Modul gegen eine SDK-Attrappe
 node tests/runtime_test.mjs      # Laufzeit window.visuExt
 node tests/core_test.mjs         # Prüfregeln der Erweiterung
+node tests/motion_test.mjs       # Bewegungserkennung mit erzeugten Bildern
 node tests/inject_test.mjs       # Lader und Brücke in Headless-Chrome (eigenes Profil)
 node tests/options_test.mjs      # Einrichtung in Headless-Chrome, Chrome-Schnittstellen als Attrappe
 node tests/extension_test.mjs    # die echte Erweiterung in Headless-Chrome, Server nicht unter localhost

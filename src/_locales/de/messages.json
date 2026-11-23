@@ -100,5 +100,26 @@
     },
     "errNoManifest": {
         "message": "Nicht verbunden. $1"
+    },
+    "camTitle": {
+        "message": "Bewegungsmelder"
+    },
+    "camIntro": {
+        "message": "Die Kamera dieses Geräts kann den Bildschirmschoner wecken und Symcon Bewegungen melden. Eingeschaltet wird er je Gerät im Formular der Instanz „Visu-Erweiterung“; hier stimmst du für dieses Gerät zu. Die Bilder bleiben in der Erweiterung: Symcon erfährt nur „Bewegung“ oder „keine Bewegung“. Solange die Kamera läuft, zeigt der Browser das an."
+    },
+    "camAllow": {
+        "message": "Kamera als Bewegungsmelder erlauben"
+    },
+    "camOn": {
+        "message": "Erlaubt. Die Kamera läuft, sobald der Bewegungsmelder in Symcon für dieses Gerät eingeschaltet ist und die Visualisierung offen ist."
+    },
+    "camOff": {
+        "message": "Nicht erlaubt: Die Kamera bleibt aus, auch wenn der Bewegungsmelder in Symcon eingeschaltet ist."
+    },
+    "camDenied": {
+        "message": "Der Browser hat die Kamera nicht freigegeben. In den Website-Einstellungen der Erweiterung die Kamera erlauben und erneut versuchen."
+    },
+    "camMissing": {
+        "message": "Keine Kamera gefunden oder sie ist von einem anderen Programm belegt."
     }
 }

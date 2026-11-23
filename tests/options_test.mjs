@@ -28,8 +28,11 @@ const ATTRAPPE = `<script>
   var z = window.__z = { store: JSON.parse(localStorage.getItem('__store') || '[]'), rechte: [], skript: null, erlauben: true };
   window.chrome = Object.assign(window.chrome || {}, {
     i18n: { getMessage: function (k, a) { return T[k] ? T[k].message.replace('$1', (a || [])[0]) : ''; }, getUILanguage: function () { return 'de'; } },
-    storage: { local: { get: function () { return Promise.resolve({ connections: JSON.parse(JSON.stringify(z.store)) }); },
-                        set: function (o) { z.store = JSON.parse(JSON.stringify(o.connections)); localStorage.setItem('__store', JSON.stringify(z.store)); return Promise.resolve(); } } },
+    storage: { local: { get: function (k) { return Promise.resolve(k === 'camera' ? { camera: z.kamera === true } : { connections: JSON.parse(JSON.stringify(z.store)) }); },
+                        set: function (o) {
+                          if ('camera' in o) z.kamera = o.camera;
+                          if (o.connections) { z.store = JSON.parse(JSON.stringify(o.connections)); localStorage.setItem('__store', JSON.stringify(z.store)); }
+                          return Promise.resolve(); } } },
     permissions: { request: function (p) { if (z.erlauben) p.origins.forEach(function (o) { if (z.rechte.indexOf(o) < 0) z.rechte.push(o); }); return Promise.resolve(z.erlauben); },
                    getAll: function () { return Promise.resolve({ origins: z.rechte.slice() }); },
                    remove: function (p) { z.rechte = z.rechte.filter(function (o) { return p.origins.indexOf(o) < 0; }); return Promise.resolve(true); } },

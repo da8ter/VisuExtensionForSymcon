@@ -128,6 +128,28 @@ final class VisuExtCore
             'category' => is_int($category) && $category > 0 ? $category : 0];
     }
 
+    /**
+     * Bewegungsmelder eines Geräts: an/aus und Empfindlichkeit (1 = gering, 2 = mittel, 3 = hoch).
+     * @return array{on:bool,level:int}
+     */
+    public static function cleanMotion(mixed $on, mixed $level): array
+    {
+        return ['on' => $on === true, 'level' => in_array($level, [1, 2, 3], true) ? $level : 2];
+    }
+
+    /** Dasselbe aus dem gespeicherten Eintrag eines Geräts. */
+    public static function motionOf(mixed $motion): array
+    {
+        $motion = is_array($motion) ? $motion : [];
+        return self::cleanMotion($motion['on'] ?? false, $motion['level'] ?? 2);
+    }
+
+    /** Zustand der Kamera, wie ihn die Laufzeit meldet; Unbekanntes wird „error“. */
+    public static function cleanCamState(mixed $state): string
+    {
+        return in_array($state, ['ok', 'blocked', 'denied', 'nocam', 'error'], true) ? $state : 'error';
+    }
+
     /** Dasselbe aus dem gespeicherten Eintrag eines Geräts. */
     public static function saverOf(mixed $saver): array
     {
