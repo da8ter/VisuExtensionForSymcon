@@ -1,6 +1,6 @@
 # Visu-Erweiterung für Symcon
 
-![Visu-Erweiterung für Symcon — Mini-Player eines angedockten Moduls über der Visualisierung](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Mini-Player.png)
+![Visu-Erweiterung für Symcon — Module andocken, Bildschirmschoner, Bewegungsmelder, zurück zur Startseite](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Header.png)
 
 In der Kachel-Visualisierung von Symcon lebt jede Kachel für sich, und nur, solange ihre Seite angezeigt wird. Das hat Folgen:
 
