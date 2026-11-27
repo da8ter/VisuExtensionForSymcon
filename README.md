@@ -20,7 +20,7 @@ Du richtest je Browser genau eine Verbindung ein, zum Modul „Visu-Erweiterung�
 1. In der Verwaltungskonsole unter „Module“ dieses Repository hinzufügen: `https://github.com/da8ter/VisuExtensionForSymcon`
 2. Eine Instanz „Visu-Erweiterung“ anlegen. Je Symcon ist eine möglich.
 
-Benötigt wird Symcon ab Version 8.1.
+Benötigt wird Symcon ab Version 8.1. Formular, Variablen und PHP-Befehle des Moduls stehen in der [Anleitung zum Modul](VisuExtension/README.md).
 
 ### Browser-Erweiterung
 
