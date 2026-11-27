@@ -69,7 +69,9 @@
             "Camera": "Kamera",
             "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.": "Die Kamera des Geräts weckt den Bildschirmschoner und setzt die Variable „Bewegung“ des Geräts; nach der Rückstellzeit ohne Bewegung geht sie wieder aus. Die Kamera läuft in der Browser-Erweiterung; Bilder verlassen das Gerät nie.",
             "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Braucht die Zustimmung am Gerät: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Browser-Erweiterung. Wirkt nur, solange das Display an ist.",
-            "Reset after": "Rückstellzeit"
+            "Reset after": "Rückstellzeit",
+            "A file of the module is missing: %s": "Eine Datei des Moduls fehlt: %s",
+            "Image %d of the screensaver cannot be read": "Bild %d des Bildschirmschoners lässt sich nicht lesen"
         },
         "en": {
             "Visu Extension": "Visu Extension",
@@ -140,7 +142,9 @@
             "Camera": "Camera",
             "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.": "The camera of the device wakes the screensaver and sets the variable \"motion\" of the device; it goes off again after the reset time without motion. The camera runs in the browser extension; images never leave the device.",
             "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.": "Needs consent on the device: \"Allow the camera as motion detector\" in the setup of the browser extension. Only works while the display is on.",
-            "Reset after": "Reset after"
+            "Reset after": "Reset after",
+            "A file of the module is missing: %s": "A file of the module is missing: %s",
+            "Image %d of the screensaver cannot be read": "Image %d of the screensaver cannot be read"
         }
     }
 }

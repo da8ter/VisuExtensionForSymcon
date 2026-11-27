@@ -124,6 +124,10 @@ function IPS_GetMediaContent(int $ID): string { return base64_encode($GLOBALS['o
 function IPS_GetKernelRunlevel(): int { return $GLOBALS['runlevel']; }
 function IPS_GetName(int $ID): string { return 'Visu-Erweiterung'; }
 function IPS_GetOption(string $Option): mixed { return false; }
+function IPS_InstanceExists(int $InstanceID): bool
+{
+    return isset($GLOBALS['modules'][$InstanceID]);
+}
 function IPS_GetInstance(int $InstanceID): array|false
 {
     return isset($GLOBALS['modules'][$InstanceID]) ? ['ConnectionID' => $GLOBALS['modules'][$InstanceID]->parent] : false;

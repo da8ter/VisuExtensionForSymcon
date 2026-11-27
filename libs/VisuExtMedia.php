@@ -20,7 +20,7 @@ trait VisuExtMedia
      */
     private function images(int $category): array
     {
-        if ($category <= 0 || !@IPS_CategoryExists($category)) {
+        if ($category <= 0 || !IPS_CategoryExists($category)) {
             return [];
         }
         $found = [];
@@ -31,7 +31,7 @@ trait VisuExtMedia
                 $type = IPS_GetObject($child)['ObjectType'];
                 if ($type === OBJECTTYPE_LINK) {
                     $child = (int) IPS_GetLink($child)['TargetID'];
-                    $type = @IPS_MediaExists($child) ? OBJECTTYPE_MEDIA : -1;
+                    $type = IPS_MediaExists($child) ? OBJECTTYPE_MEDIA : -1;
                 }
                 if ($type === OBJECTTYPE_CATEGORY && $depth < 5) {
                     $queue[] = [$child, $depth + 1];
@@ -76,7 +76,13 @@ trait VisuExtMedia
             $this->status(404);
             return;
         }
-        $content = (string) base64_decode((string) @IPS_GetMediaContent($media), true);
+        $raw = @IPS_GetMediaContent($media);
+        if (!is_string($raw)) {
+            $this->LogMessage(sprintf($this->Translate('Image %d of the screensaver cannot be read'), $media), KL_WARNING);
+            $this->status(404);
+            return;
+        }
+        $content = (string) base64_decode($raw, true);
         $type = VisuExtCore::imageType(substr($content, 0, 16));
         if ($type === '' || $offset >= strlen($content)) {
             $this->status(404);

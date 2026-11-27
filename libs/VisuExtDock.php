@@ -91,7 +91,6 @@ trait VisuExtDock
 
     private function isChild(int $instance): bool
     {
-        $info = @IPS_GetInstance($instance);
-        return is_array($info) && (int) ($info['ConnectionID'] ?? 0) === $this->InstanceID;
+        return IPS_InstanceExists($instance) && IPS_GetInstance($instance)['ConnectionID'] === $this->InstanceID;
     }
 }

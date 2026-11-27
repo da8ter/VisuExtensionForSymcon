@@ -252,7 +252,8 @@ trait VisuExtChannel
     {
         $control = $this->webhookControl();
         if ($control > 0) {
-            // Meldet auch an eine tote Verbindung „gesendet“: der Rückgabewert sagt nichts
+            // @: Ein Browser, der gerade gegangen ist, ist kein Fehler; er fällt beim nächsten Sweep aus den Sitzungen.
+            // Der Rückgabewert sagt nichts (auch an eine tote Verbindung „gesendet“).
             @WC_PushMessageEx($control, '/hook/' . self::HOOK,
                 (string) json_encode($msg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE), $addr, $port);
         }

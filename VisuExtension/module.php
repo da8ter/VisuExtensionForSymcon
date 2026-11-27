@@ -289,11 +289,23 @@ class VisuExtension extends IPSModuleStrict
             'beat'    => VisuExtCore::BEAT_SECONDS,
         ] + $this->deviceConfig($device) + [
             // Kunstwerke des Bildschirmschoners: die Bilder lädt der Browser selbst bei Wikimedia Commons
-            'art' => VisuExtCore::artworks(json_decode((string) @file_get_contents(__DIR__ . '/../libs/artworks.json'), true)),
+            'art' => VisuExtCore::artworks(json_decode($this->asset('artworks.json'), true)),
         ];
         return str_replace('/*VISUEXT*/null',
             (string) json_encode($config, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_INVALID_UTF8_SUBSTITUTE),
-            (string) @file_get_contents(__DIR__ . '/../libs/runtime.js'));
+            $this->asset('runtime.js'));
+    }
+
+    /** Eine Datei aus libs/ lesen. Fehlt sie, steht das im Meldungsfenster, statt dass der Browser still nichts bekommt. */
+    private function asset(string $file): string
+    {
+        $path = __DIR__ . '/../libs/' . $file;
+        $content = is_file($path) ? file_get_contents($path) : false;
+        if ($content === false) {
+            $this->LogMessage(sprintf($this->Translate('A file of the module is missing: %s'), $file), KL_ERROR);
+            return '';
+        }
+        return $content;
     }
 
     /** @return list<array<string,mixed>> */
@@ -408,6 +420,7 @@ class VisuExtension extends IPSModuleStrict
 
     private function outputLimit(): int
     {
+        // @: Kennt eine Symcon-Fassung die Option nicht, gilt die Vorgabe von 1 MiB; der Rückgabewert wird geprüft
         $limit = @IPS_GetOption('ScriptOutputBufferLimit');
         return (is_int($limit) && $limit > 0 ? $limit : 1048576) - 1024;
     }
