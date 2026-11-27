@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Kanal zu den Geräten: WebSocket am Hook des Moduls.
  *
- * Gemessen an Symcon 9.1 (20.11.2026, docs/plan-vertrag-2.md): Symcon nimmt die Verbindung an, bevor
+ * Gemessen am 20.11.2026: Symcon nimmt die Verbindung an, bevor
  * Modulcode läuft, und meldet weder Ping noch Trennung. Deshalb meldet sich das Gerät im ersten Frame
  * an und schickt alle BEAT_SECONDS ein Lebenszeichen; bleibt es SESSION_SECONDS aus, gilt die
  * Verbindung als getrennt. Frames verschiedener Verbindungen laufen gleichzeitig: jede Änderung an
