@@ -1,5 +1,7 @@
 # Visu-Erweiterung für Symcon
 
+![Visu-Erweiterung für Symcon — Bildschirmschoner mit Kunstwerk](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Bildschirmschoner%20Kunstwerk.jpg)
+
 Browser-Erweiterung für Chrome und Edge mit dem passenden Symcon-Modul. Zusammen laden sie Zusatzfunktionen installierter Module in die Kachel-Visualisierung von Symcon: auf jeder Seite und ohne dass eine Kachel des Moduls geladen sein muss. Ein Modul kann so zum Beispiel Hinweise über die ganze Visualisierung legen.
 
 ```
@@ -34,6 +36,8 @@ Den Ordner danach nicht verschieben oder löschen: Der Browser lädt die Erweite
 
 ## Einen Browser verbinden
 
+![Visu-Erweiterung für Symcon — Einrichtung der Erweiterung](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Einrichtung.png)
+
 1. Im Formular der Instanz „Visu-Erweiterung“ auf „Gerät hinzufügen“ drücken. Es erscheint ein Code aus sechs Ziffern, zehn Minuten gültig.
 2. In der Einrichtung der Erweiterung die Adresse eintragen, unter der du die Visualisierung öffnest (zum Beispiel `http://symcon.local:3777`), dazu den Code und einen Namen für diesen Browser („Küche“).
 3. Den Zugriff auf diesen Server erlauben. Die Einrichtung zeigt „Verbunden“.
@@ -49,6 +53,10 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 - **Bewegungsmelder:** je Gerät einstellbar, mit drei Stufen der Empfindlichkeit. Die Kamera des Geräts weckt den Bildschirmschoner, sobald jemand davorsteht, und setzt die Variable „Bewegung“ des Geräts; nach der Rückstellzeit ohne Bewegung (je Gerät einstellbar, Vorgabe 30 Sekunden) geht sie wieder aus. Damit taugt das Wandtablett auch als Präsenzmelder für Licht oder Ereignisse. Zusätzlich muss man am Gerät selbst zustimmen: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Erweiterung, dabei fragt der Browser nach der Kamera. Die Kamera läuft in der Erweiterung, nicht in der Visualisierung, deshalb klappt es auch, wenn die Visualisierung über `http://` im Heimnetz geöffnet ist. Die Erkennung braucht kaum Rechenzeit: Die Kamera liefert ein kleines Bild mit höchstens 5 Bildern je Sekunde, verglichen werden drei je Sekunde.
 - **Angedockte Module** und, sobald es mehrere gibt, welches Modul auf welchem Gerät läuft (Vorgabe: jedes auf jedem).
 - Die Variable „Verbundene Geräte“ gibt es immer, auf Wunsch je Gerät eine Variable „online“.
+
+Angedockte Module erscheinen auf jeder Seite der Visualisierung, hier der Mini-Player des [Musikplayers für Spotify](https://github.com/da8ter/MusicPlayerForSpotify):
+
+![Visu-Erweiterung für Symcon — Mini-Player eines angedockten Moduls](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Mini-Player.png)
 
 ## Grenzen
 
