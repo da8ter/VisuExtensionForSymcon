@@ -1,6 +1,6 @@
 # Vertrag 2: das Modul „Visu-Erweiterung“
 
-Stand: 23.11.2026. Das Symcon-Modul in diesem Repo (`VisuExtension/`, Präfix `VISUEXT`) und die Browser-Erweiterung in `src/` (ab 0.2) sprechen diese Fassung; den Bewegungsmelder gibt es ab 0.3. Vertrag 1 gibt es nicht mehr.
+Stand: 23.11.2026. Das Symcon-Modul in diesem Repo (`VisuExtension/`, Präfix `VISUEXT`) und die Browser-Erweiterung in `libs/extension/` (ab 0.2) sprechen diese Fassung; den Bewegungsmelder gibt es ab 0.3. Vertrag 1 gibt es nicht mehr.
 
 Die Erweiterung verbindet sich je Server mit genau einer Instanz „Visu-Erweiterung“. Andere Module docken in Symcon an diese Instanz an. Sie brauchen keinen eigenen Hook, keinen eigenen Schlüssel und kein Adressfeld.
 
@@ -10,7 +10,7 @@ Browser (Erweiterung) ──/hook/visuext──▶ Visu-Erweiterung ──Datenf
 
 ## Für Modulhersteller
 
-Wie ein Modul andockt (Datenfluss, die drei Anfragen, das Skript und die Laufzeit `window.visuExt`), steht in [entwickler.md](entwickler.md); eine Vorlage liegt in [`examples/`](../examples/). Dieser Text beschreibt, wie Erweiterung und Modul miteinander sprechen.
+Wie ein Modul andockt (Datenfluss, die drei Anfragen, das Skript und die Laufzeit `window.visuExt`), steht in [entwickler.md](entwickler.md); eine Vorlage liegt in [`docs/examples/`](examples/). Dieser Text beschreibt, wie Erweiterung und Modul miteinander sprechen.
 
 ## Für die Erweiterung: der Hook
 
@@ -75,7 +75,7 @@ Bleibt das Lebenszeichen 90 Sekunden aus, gilt die Verbindung für Symcon als ge
 
 ### Bewegungsmelder in der Erweiterung
 
-Die Kamera läuft im Offscreen-Dokument der Erweiterung (`src/camera.html`), nicht in der Visualisierung: Der Browser gibt die Kamera nur sicheren Seiten, eine Visualisierung über `http://` ist keine, die Seiten der Erweiterung schon. Der Weg: Die Laufzeit nennt der Brücke die Einstellung (DOM-Ereignis `visu-ext:camera`, `{on, level}`); hat das Gerät in der Einrichtung zugestimmt (`chrome.storage.local.camera`), öffnet die Brücke einen Port `camera` zum Hintergrunddienst. Solange ein Port offen ist, läuft das Offscreen-Dokument; seine Meldungen (`motion`, `cam`) gehen an alle diese Tabs und von der Brücke an die Laufzeit (`visu-ext:motion`). Die Kamera liefert höchstens 160 × 120 Pixel mit 5 Bildern je Sekunde; verglichen werden drei Bilder je Sekunde als Graubild mit 64 × 48 Pixeln (`src/motion.js`). Bewegung heißt: Nach Abzug der allgemeinen Helligkeitsänderung weichen mindestens 6 / 3 / 1,2 % der Pixel deutlich ab (Empfindlichkeit gering / mittel / hoch). Eine Bewegung weckt den Bildschirmschoner und stellt seine Frist neu, nicht die des Rücksprungs.
+Die Kamera läuft im Offscreen-Dokument der Erweiterung (`libs/extension/camera.html`), nicht in der Visualisierung: Der Browser gibt die Kamera nur sicheren Seiten, eine Visualisierung über `http://` ist keine, die Seiten der Erweiterung schon. Der Weg: Die Laufzeit nennt der Brücke die Einstellung (DOM-Ereignis `visu-ext:camera`, `{on, level}`); hat das Gerät in der Einrichtung zugestimmt (`chrome.storage.local.camera`), öffnet die Brücke einen Port `camera` zum Hintergrunddienst. Solange ein Port offen ist, läuft das Offscreen-Dokument; seine Meldungen (`motion`, `cam`) gehen an alle diese Tabs und von der Brücke an die Laufzeit (`visu-ext:motion`). Die Kamera liefert höchstens 160 × 120 Pixel mit 5 Bildern je Sekunde; verglichen werden drei Bilder je Sekunde als Graubild mit 64 × 48 Pixeln (`libs/extension/motion.js`). Bewegung heißt: Nach Abzug der allgemeinen Helligkeitsänderung weichen mindestens 6 / 3 / 1,2 % der Pixel deutlich ab (Empfindlichkeit gering / mittel / hoch). Eine Bewegung weckt den Bildschirmschoner und stellt seine Frist neu, nicht die des Rücksprungs.
 
 ## Im Formular der Instanz
 
@@ -107,4 +107,4 @@ Am 20.11.2026 zusätzlich an einem laufenden Symcon durchgespielt, mit der echte
 
 ## English summary
 
-One Symcon module (“Visu Extension”, hook `/hook/visuext`) is the single connection between the browser extension and Symcon. A browser is paired once with a six-digit code (`POST ?k=pair`) and receives a device id and key. The description (`?k=ext`, key in the `X-Visu-Key` header or in a POST body) lists script URLs signed with a short-lived ticket; the first one is the runtime `window.visuExt`, which keeps a WebSocket channel to the hook (login in the first frame, heartbeat every 30 s, automatic reconnect). Other modules dock onto the instance through the data flow: they answer `Describe`, `Script` and `Event` in `ReceiveData()` and send to devices with `SendDataToParent()` (`Send`, `Devices`). See [`examples/`](../examples/).
+One Symcon module (“Visu Extension”, hook `/hook/visuext`) is the single connection between the browser extension and Symcon. A browser is paired once with a six-digit code (`POST ?k=pair`) and receives a device id and key. The description (`?k=ext`, key in the `X-Visu-Key` header or in a POST body) lists script URLs signed with a short-lived ticket; the first one is the runtime `window.visuExt`, which keeps a WebSocket channel to the hook (login in the first frame, heartbeat every 30 s, automatic reconnect). Other modules dock onto the instance through the data flow: they answer `Describe`, `Script` and `Event` in `ReceiveData()` and send to devices with `SendDataToParent()` (`Send`, `Devices`). See [`docs/examples/`](examples/).

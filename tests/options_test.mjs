@@ -1,4 +1,4 @@
-// Einrichtung (src/options.html + options.js) in Headless-Chrome mit eigenem Profil. Die Chrome-
+// Einrichtung (libs/extension/options.html + options.js) in Headless-Chrome mit eigenem Profil. Die Chrome-
 // Schnittstellen (i18n, storage, permissions, scripting) sind Attrappen; der Node-Server spielt das
 // Modul „Visu-Erweiterung“ (Vertrag 2: koppeln und Beschreibung).
 //   node tests/options_test.mjs
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const TEXTE = JSON.parse(readFileSync(join(ROOT, 'src/_locales/de/messages.json'), 'utf8'));
+const TEXTE = JSON.parse(readFileSync(join(ROOT, 'libs/extension/_locales/de/messages.json'), 'utf8'));
 const T = (k, wert) => TEXTE[k].message.replace('$1', wert);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let fehler = 0, anzahl = 0;
@@ -51,9 +51,9 @@ const srv = http.createServer((req, res) => {
   const status = (n) => { res.statusCode = n; res.end(); };
   if (u.pathname === '/ext/options.html') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.end(readFileSync(join(ROOT, 'src/options.html'), 'utf8').replace('<script src="core.js">', ATTRAPPE + '<script src="core.js">'));
+    return res.end(readFileSync(join(ROOT, 'libs/extension/options.html'), 'utf8').replace('<script src="core.js">', ATTRAPPE + '<script src="core.js">'));
   }
-  if (u.pathname.startsWith('/ext/')) { res.setHeader('Content-Type', 'application/javascript'); return res.end(readFileSync(join(ROOT, 'src', u.pathname.slice(5)), 'utf8')); }
+  if (u.pathname.startsWith('/ext/')) { res.setHeader('Content-Type', 'application/javascript'); return res.end(readFileSync(join(ROOT, 'libs/extension', u.pathname.slice(5)), 'utf8')); }
   if (u.pathname !== '/hook/visuext' || req.method !== 'POST') return status(404);
   let rumpf = '';
   req.on('data', (d) => { rumpf += d; });

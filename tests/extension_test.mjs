@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const TEXTE = JSON.parse(readFileSync(join(ROOT, 'src/_locales/de/messages.json'), 'utf8'));
+const TEXTE = JSON.parse(readFileSync(join(ROOT, 'libs/extension/_locales/de/messages.json'), 'utf8'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let fehler = 0, anzahl = 0;
 const pruefe = (name, ist, soll) => {
@@ -64,7 +64,7 @@ const ORIGIN = `http://symcon.test:${srv.address().port}`;
 // ── Erweiterung: Kopie mit vorab erteiltem Zugriff (die Freigabe-Abfrage kann hier niemand anklicken) ──
 const arbeit = mkdtempSync(join(tmpdir(), 'visuext-echt-'));
 const ext = join(arbeit, 'ext'), profil = join(arbeit, 'profil');
-cpSync(join(ROOT, 'src'), ext, { recursive: true });
+cpSync(join(ROOT, 'libs/extension'), ext, { recursive: true });
 const manifest = JSON.parse(readFileSync(join(ext, 'manifest.json'), 'utf8'));
 manifest.host_permissions = ['http://*/*'];
 writeFileSync(join(ext, 'manifest.json'), JSON.stringify(manifest));

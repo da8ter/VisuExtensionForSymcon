@@ -1,4 +1,4 @@
-// Prüfregeln aus src/core.js (Vertrag 2): Adresse, Code, Verbindung, Kopplung und Beschreibung, vor allem die Ablehnungen.
+// Prüfregeln aus libs/extension/core.js (Vertrag 2): Adresse, Code, Verbindung, Kopplung und Beschreibung, vor allem die Ablehnungen.
 //   node tests/core_test.mjs
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const lies = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const ctx = vm.createContext({ URL });
-vm.runInContext(lies('../src/core.js'), ctx);
+vm.runInContext(lies('../libs/extension/core.js'), ctx);
 const core = ctx.VisuExt;
 let fehler = 0, anzahl = 0;
 const pruefe = (name, ist, soll) => {
@@ -68,8 +68,8 @@ pruefe('Anfragen: Schlüssel und Code stehen im Rumpf, nie in der Adresse',
   [`${O}/hook/visuext?k=ext`, 'POST', { d: 'a1b2c3d4', key: KEY }, false, `${O}/hook/visuext?k=pair`, { code: '123456', name: 'Küche' }, true]);
 
 // ── Texte ───────────────────────────────────────────────────────────────────────
-const de = JSON.parse(lies('../src/_locales/de/messages.json')), en = JSON.parse(lies('../src/_locales/en/messages.json'));
-const quelle = lies('../src/options.js') + lies('../src/options.html') + lies('../src/manifest.json');
+const de = JSON.parse(lies('../libs/extension/_locales/de/messages.json')), en = JSON.parse(lies('../libs/extension/_locales/en/messages.json'));
+const quelle = lies('../libs/extension/options.js') + lies('../libs/extension/options.html') + lies('../libs/extension/manifest.json');
 // Verlangt: jeder Schlüssel, den t('…'), data-i18n oder __MSG_…__ nennt. Erwähnt: jeder, der irgendwo in Anführungszeichen steht.
 const verlangt = new Set([...quelle.matchAll(/\bt\('(\w+)'/g), ...quelle.matchAll(/data-i18n(?:-placeholder)?="(\w+)"/g), ...quelle.matchAll(/__MSG_(\w+)__/g)].map((x) => x[1]));
 const erwaehnt = new Set([...verlangt, ...[...quelle.matchAll(/'(\w+)'/g)].map((x) => x[1])]);

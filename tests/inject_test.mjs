@@ -1,4 +1,4 @@
-// Inhaltsskripte (src/inject.js fürs Seitenfenster, src/core.js + src/bridge.js für den abgeschotteten
+// Inhaltsskripte (libs/extension/inject.js fürs Seitenfenster, libs/extension/core.js + libs/extension/bridge.js für den abgeschotteten
 // Bereich) in Headless-Chrome mit eigenem Profil, hier beide im selben Fenster. Ein Node-Server spielt
 // Visu und das Modul „Visu-Erweiterung“ nach; chrome.storage ist eine Attrappe. Die echte Erweiterung prüft extension_test.mjs.
 //   node tests/inject_test.mjs
@@ -41,7 +41,7 @@ const srv = http.createServer((req, res) => {
   if (u.pathname === '/' || u.pathname === '/console/' || u.pathname === '/hook/seite') return html(seite());
   if (u.pathname === '/umgekehrt') return html(seite(true));
   if (u.pathname === '/rahmen') return html('<!doctype html><body><iframe id="k" src="/"></iframe></body>');
-  if (u.pathname.startsWith('/ext/')) return js(readFileSync(join(ROOT, 'src', u.pathname.slice(5)), 'utf8'));
+  if (u.pathname.startsWith('/ext/')) return js(readFileSync(join(ROOT, 'libs/extension', u.pathname.slice(5)), 'utf8'));
   if (u.pathname === '/hook/visuext' && u.searchParams.get('k') === 'ext' && req.method === 'POST') {
     let rumpf = '';
     req.on('data', (d) => { rumpf += d; });

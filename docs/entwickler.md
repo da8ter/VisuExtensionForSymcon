@@ -6,7 +6,7 @@ Die Browser-Erweiterung verbindet sich je Server mit genau einer Instanz des Sym
 Browser (Erweiterung) ──/hook/visuext──▶ Visu-Erweiterung ──Datenfluss──▶ dein Modul
 ```
 
-Eine vollständige Vorlage liegt in [`examples/`](../examples/). Wie Erweiterung und Visu-Erweiterung miteinander sprechen (Koppeln, Beschreibung, Kanal), steht in [vertrag-2.md](vertrag-2.md); zum Andocken musst du das nicht kennen.
+Eine vollständige Vorlage liegt in [`docs/examples/`](examples/). Wie Erweiterung und Visu-Erweiterung miteinander sprechen (Koppeln, Beschreibung, Kanal), steht in [vertrag-2.md](vertrag-2.md); zum Andocken musst du das nicht kennen.
 
 ## Andocken
 
@@ -88,7 +88,7 @@ Symcons `/icons.js` (Font Awesome) ist rund 3 MB groß. Damit sie nur einmal im 
 - Gibt es ihn nicht, lege ihn an, setze vor dem Laden `FontAwesomeConfig = { autoReplaceSvg: false, observeMutations: false, autoAddCss: false }` und lade `/icons.js`. Ohne diese Schalter würde Font Awesome Elemente der Visualisierung ersetzen.
 - Bringt die Visualisierung selbst ein `FontAwesome` mit, fasse nichts an.
 
-Die Funktion `icons()` in [`examples/start-script.js`](../examples/start-script.js) macht genau das.
+Die Funktion `icons()` in [`docs/examples/start-script.js`](examples/start-script.js) macht genau das.
 
 ## Prüfen
 
@@ -103,4 +103,4 @@ Die Funktion `icons()` in [`examples/start-script.js`](../examples/start-script.
 
 ## English summary
 
-A module docks onto the Symcon instance “Visu Extension” through the data flow and needs no hook, token or address field of its own. Add `parentRequirements` `{A5B87602-1C34-4981-89A5-62A0735CB359}` and `implemented` `{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}` to its `module.json`, offer the Visu Extension in `GetCompatibleParents()` and answer three requests in `ReceiveData()`: `Describe` (name, version, active), `Script` (the JavaScript text with its configuration inserted) and `Event` (data sent by the script). Send to the paired browsers with `SendDataToParent()` (`Send`, `Devices`). In the page, get the runtime through the queue `window.visuExtReady` and use `ext.on`, `ext.send` and `ext.onState`. Scripts run once per load in the top window of the visualization, must tolerate being loaded twice, must not rely on the structure of the visualization and should use unique names. See [`examples/`](../examples/) for a complete template, including the optional shared icon slot `window.__symconIcons`.
+A module docks onto the Symcon instance “Visu Extension” through the data flow and needs no hook, token or address field of its own. Add `parentRequirements` `{A5B87602-1C34-4981-89A5-62A0735CB359}` and `implemented` `{9E7FA1CF-55F3-418B-8C92-FF4BAAC93EFA}` to its `module.json`, offer the Visu Extension in `GetCompatibleParents()` and answer three requests in `ReceiveData()`: `Describe` (name, version, active), `Script` (the JavaScript text with its configuration inserted) and `Event` (data sent by the script). Send to the paired browsers with `SendDataToParent()` (`Send`, `Devices`). In the page, get the runtime through the queue `window.visuExtReady` and use `ext.on`, `ext.send` and `ext.onState`. Scripts run once per load in the top window of the visualization, must tolerate being loaded twice, must not rely on the structure of the visualization and should use unique names. See [`docs/examples/`](examples/) for a complete template, including the optional shared icon slot `window.__symconIcons`.

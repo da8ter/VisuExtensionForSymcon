@@ -54,7 +54,7 @@ Benötigt wird Symcon ab Version 8.1. Formular, Variablen und PHP-Befehle des Mo
 2. In Chrome `chrome://extensions` öffnen (in Edge `edge://extensions`) und den Entwicklermodus einschalten.
 3. „Entpackte Erweiterung laden“ wählen und den entpackten Ordner angeben.
 
-Wer stattdessen das ganze Repo lädt, gibt in Schritt 3 den Unterordner `src` an.
+Wer stattdessen das ganze Repo lädt, gibt in Schritt 3 den Unterordner `libs/extension` an.
 
 Die Einrichtung öffnet sich danach von selbst. Später erreichst du sie über das Symbol der Erweiterung.
 
@@ -99,7 +99,7 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 
 ## Für Modulhersteller
 
-Ein Modul dockt in Symcon über den Datenfluss an die Visu-Erweiterung an: Es liefert ihr sein Skript und tauscht über ihren Kanal Nachrichten mit den verbundenen Browsern. Einen eigenen Hook oder Schlüssel braucht es dafür nicht. Ein Beispiel aus dem Betrieb ist die [Benachrichtigungs-Kachel](https://github.com/da8ter/TileVisu-Benachrichtigungen): Angedockt zeigt sie ihre Overlays auf jeder Seite. Die Anleitung steht in [docs/entwickler.md](docs/entwickler.md), eine Vorlage in [examples/](examples/), das Protokoll zwischen Erweiterung und Modul in [docs/vertrag-2.md](docs/vertrag-2.md).
+Ein Modul dockt in Symcon über den Datenfluss an die Visu-Erweiterung an: Es liefert ihr sein Skript und tauscht über ihren Kanal Nachrichten mit den verbundenen Browsern. Einen eigenen Hook oder Schlüssel braucht es dafür nicht. Ein Beispiel aus dem Betrieb ist die [Benachrichtigungs-Kachel](https://github.com/da8ter/TileVisu-Benachrichtigungen): Angedockt zeigt sie ihre Overlays auf jeder Seite. Die Anleitung steht in [docs/entwickler.md](docs/entwickler.md), eine Vorlage in [docs/examples/](docs/examples/), das Protokoll zwischen Erweiterung und Modul in [docs/vertrag-2.md](docs/vertrag-2.md).
 
 ## Prüfen
 
@@ -115,7 +115,7 @@ node tests/extension_test.mjs    # die echte Erweiterung in Headless-Chrome, Ser
 
 ## English summary
 
-A browser extension for Chrome and Edge plus a Symcon module. Together they load add-on scripts of installed Symcon modules into the tile visualization, on every page and without a tile of that module being loaded. Add this repository in Symcon's module control and create one instance “Visu Extension”. Install the extension via “Load unpacked” (the unpacked release ZIP, or the folder `src` of the repository). To connect a browser, press “Add device” in the instance form and enter the address of your visualization and the six-digit code in the extension's options. Other modules dock onto the instance inside Symcon and need no setup in the extension; module developers see [docs/entwickler.md](docs/entwickler.md) (with an English summary) and [examples/](examples/). Not a product of Symcon GmbH.
+A browser extension for Chrome and Edge plus a Symcon module. Together they load add-on scripts of installed Symcon modules into the tile visualization, on every page and without a tile of that module being loaded. Add this repository in Symcon's module control and create one instance “Visu Extension”. Install the extension via “Load unpacked” (the unpacked release ZIP, or the folder `libs/extension` of the repository). To connect a browser, press “Add device” in the instance form and enter the address of your visualization and the six-digit code in the extension's options. Other modules dock onto the instance inside Symcon and need no setup in the extension; module developers see [docs/entwickler.md](docs/entwickler.md) (with an English summary) and [docs/examples/](docs/examples/). Not a product of Symcon GmbH.
 
 ## Lizenz
 

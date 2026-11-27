@@ -1,11 +1,11 @@
-// Bewegungserkennung der Erweiterung (src/motion.js) mit erzeugten Graubildern.
+// Bewegungserkennung der Erweiterung (libs/extension/motion.js) mit erzeugten Graubildern.
 //   node tests/motion_test.mjs
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const ctx = vm.createContext({ Uint8Array, Math });
-vm.runInContext(readFileSync(fileURLToPath(new URL('../src/motion.js', import.meta.url)), 'utf8'), ctx);
+vm.runInContext(readFileSync(fileURLToPath(new URL('../libs/extension/motion.js', import.meta.url)), 'utf8'), ctx);
 const M = ctx.VisuExtMotion;
 let fehler = 0, anzahl = 0;
 const pruefe = (name, ist, soll) => {

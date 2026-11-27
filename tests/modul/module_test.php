@@ -47,7 +47,7 @@ class TestExt extends VisuExtension
     public function sess(): array { return json_decode($this->buffers['Sessions'] ?? '[]', true); }
 }
 
-/** Angedocktes Modul nach der Vorlage aus examples/. */
+/** Angedocktes Modul nach der Vorlage aus docs/examples/. */
 class FakeChild extends IPSModuleStrict
 {
     public bool $active = true;
