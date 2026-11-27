@@ -1,8 +1,34 @@
 # Visu-Erweiterung für Symcon
 
+![Visu-Erweiterung für Symcon — Mini-Player eines angedockten Moduls über der Visualisierung](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Mini-Player.png)
+
+In der Kachel-Visualisierung von Symcon lebt jede Kachel für sich, und nur, solange ihre Seite angezeigt wird. Das hat Folgen:
+
+- **Eine Funktion gibt es erst, wenn ihre Kachel einmal aufgerufen wurde.** Ein Musik-Player wird erst zum Wiedergabegerät, nachdem jemand die Seite mit seiner Kachel geöffnet hat.
+- **Verlässt du die Seite, endet, was die Kachel tut.** Spielt ein Player in seiner Kachel, stoppt die Wiedergabe beim Wechsel auf eine andere Seite.
+- **Nichts reicht über die eigene Kachel hinaus.** Eine Benachrichtigung oder ein Notizzettel erscheint nur dort, wo die passende Kachel liegt, nicht auf der Seite, die gerade offen ist.
+
+Die Visu-Erweiterung hebt diese Grenzen auf. Sie besteht aus einer Browser-Erweiterung für Chrome und Edge und einem Symcon-Modul. Zusammen laden sie Funktionen deiner Module ins Fenster der Visualisierung selbst: Sie sind auf jeder Seite da, schon beim Öffnen der Visualisierung, und bleiben beim Seitenwechsel erhalten.
+
+## Was damit möglich wird
+
+**Inhalte über alle Kacheln und Seiten hinweg.** Module docken in Symcon an die Visu-Erweiterung an. Beispiele:
+
+- **Mini-Player:** Der [Musikplayer für Spotify](https://github.com/da8ter/MusicPlayerForSpotify) spielt, ohne dass seine Kachel je geöffnet wurde, und läuft beim Seitenwechsel weiter. Auf Wunsch liegt ein kleiner, verschiebbarer Player über der Visualisierung.
+- **Klebezettel:** Notizen kleben frei auf der Visualisierung und bleiben auf jeder Seite sichtbar.
+- **Benachrichtigungen:** Die [Benachrichtigungs-Kachel](https://github.com/da8ter/TileVisu-Benachrichtigungen) zeigt ihre Meldungen auf der Seite, die gerade offen ist.
+
+![Visu-Erweiterung für Symcon — Klebezettel über der Visualisierung](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Klebezettel.png)
+
+**Funktionen für das Display selbst.** Sie bringt die Visu-Erweiterung mit, eingestellt je Gerät in Symcon:
+
+- **Zurück zur Startseite:** Nach einer einstellbaren Zeit ohne Bedienung springt die Visualisierung zurück auf ihre Startseite oder eine Seite deiner Wahl. Das Tablet an der Wand bleibt nicht auf der zuletzt geöffneten Seite stehen.
+- **Bildschirmschoner:** Nach einer eigenen Zeit legt er sich über die Visualisierung: schwarz, mit Uhr und Datum, mit berühmten Gemälden im Wechsel oder mit deinen eigenen Bildern aus Symcon. Die erste Berührung weckt nur auf und löst nichts aus. Aus Skripten lässt er sich einschalten und aufwecken, etwa wenn es klingelt.
+- **Bewegungsmelder:** Die Kamera des Geräts weckt den Bildschirmschoner, sobald jemand davorsteht, und setzt in Symcon eine Variable „Bewegung“. Das Wandtablet wird so nebenbei zum Präsenzmelder für Licht oder eigene Ereignisse. Kamerabilder verlassen das Gerät nicht.
+
 ![Visu-Erweiterung für Symcon — Bildschirmschoner mit Kunstwerk](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Bildschirmschoner%20Kunstwerk.jpg)
 
-Browser-Erweiterung für Chrome und Edge mit dem passenden Symcon-Modul. Zusammen laden sie Zusatzfunktionen installierter Module in die Kachel-Visualisierung von Symcon: auf jeder Seite und ohne dass eine Kachel des Moduls geladen sein muss. Ein Modul kann so zum Beispiel Hinweise über die ganze Visualisierung legen.
+## So hängt es zusammen
 
 ```
 Browser (Erweiterung)  ──▶  Symcon-Modul „Visu-Erweiterung“  ──▶  angedockte Module
@@ -53,10 +79,6 @@ Jeder Browser wird einzeln verbunden und bekommt dabei seinen eigenen Schlüssel
 - **Bewegungsmelder:** je Gerät einstellbar, mit drei Stufen der Empfindlichkeit. Die Kamera des Geräts weckt den Bildschirmschoner, sobald jemand davorsteht, und setzt die Variable „Bewegung“ des Geräts; nach der Rückstellzeit ohne Bewegung (je Gerät einstellbar, Vorgabe 30 Sekunden) geht sie wieder aus. Damit taugt das Wandtablett auch als Präsenzmelder für Licht oder Ereignisse. Zusätzlich muss man am Gerät selbst zustimmen: „Kamera als Bewegungsmelder erlauben“ in der Einrichtung der Erweiterung, dabei fragt der Browser nach der Kamera. Die Kamera läuft in der Erweiterung, nicht in der Visualisierung, deshalb klappt es auch, wenn die Visualisierung über `http://` im Heimnetz geöffnet ist. Die Erkennung braucht kaum Rechenzeit: Die Kamera liefert ein kleines Bild mit höchstens 5 Bildern je Sekunde, verglichen werden drei je Sekunde.
 - **Angedockte Module** und, sobald es mehrere gibt, welches Modul auf welchem Gerät läuft (Vorgabe: jedes auf jedem).
 - Die Variable „Verbundene Geräte“ gibt es immer, auf Wunsch je Gerät eine Variable „online“.
-
-Angedockte Module erscheinen auf jeder Seite der Visualisierung, hier der Mini-Player des [Musikplayers für Spotify](https://github.com/da8ter/MusicPlayerForSpotify):
-
-![Visu-Erweiterung für Symcon — Mini-Player eines angedockten Moduls](https://raw.githubusercontent.com/da8ter/images/main/Visu-Erweiterung%20Mini-Player.png)
 
 ## Grenzen
 
